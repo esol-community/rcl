@@ -28,6 +28,7 @@ add_library(
   src/node_params.c
   src/parse.c
   src/parser.c
+  src/thread_attr.c
   src/yaml_variant.c
 )
 target_include_directories(${PROJECT_NAME} PUBLIC

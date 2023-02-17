@@ -60,6 +60,8 @@ set(${PROJECT_NAME}_sources
   src/rcl/security.c
   src/rcl/service.c
   src/rcl/subscription.c
+  src/rcl/thread_attr_parse.c
+  src/rcl/thread_context.c
   src/rcl/time.c
   src/rcl/timer.c
   src/rcl/validate_enclave_name.c

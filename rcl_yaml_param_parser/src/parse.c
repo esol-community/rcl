@@ -458,6 +458,135 @@ rcutils_ret_t parse_value(
   return ret;
 }
 
+///
+/// Parse the thread value
+///
+rcutils_ret_t parse_thread_attr_value(
+  const yaml_event_t event,
+  const bool is_seq,
+  data_types_t * seq_data_type,
+  rcl_thread_attrs_t * thread_attrs,
+  int sequence)
+{
+  RCUTILS_CHECK_ARGUMENT_FOR_NULL(seq_data_type, RCUTILS_RET_INVALID_ARGUMENT);
+  RCUTILS_CHECK_ARGUMENT_FOR_NULL(thread_attrs, RCUTILS_RET_INVALID_ARGUMENT);
+  RCUTILS_CHECK_ARGUMENT_FOR_NULL(thread_attrs->attributes, RCUTILS_RET_INVALID_ARGUMENT);
+  rcutils_allocator_t allocator = thread_attrs->allocator;
+  RCUTILS_CHECK_ALLOCATOR_WITH_MSG(
+    &allocator, "invalid allocator", return RCUTILS_RET_INVALID_ARGUMENT);
+
+  const size_t val_size = event.data.scalar.length;
+  const char * value = (char *)event.data.scalar.value;
+  yaml_scalar_style_t style = event.data.scalar.style;
+  const yaml_char_t * const tag = event.data.scalar.tag;
+  const uint32_t line_num = ((uint32_t)(event.start_mark.line) + 1U);
+
+  RCUTILS_CHECK_FOR_NULL_WITH_MSG(
+    value, "event argument has no value", return RCUTILS_RET_INVALID_ARGUMENT);
+
+  if (style != YAML_SINGLE_QUOTED_SCALAR_STYLE &&
+    style != YAML_DOUBLE_QUOTED_SCALAR_STYLE &&
+    0U == val_size)
+  {
+    RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING("No value at line %d", line_num);
+    return RCUTILS_RET_ERROR;
+  }
+
+  data_types_t val_type;
+
+  void * ret_val = get_value(value, style, tag, &val_type, allocator);
+  if (NULL == ret_val) {
+    RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+      "Error parsing value %s at line %d", value, line_num);
+    return RCUTILS_RET_ERROR;
+  }
+
+  rcutils_ret_t ret = RCUTILS_RET_OK;
+  switch (val_type) {
+    case DATA_TYPE_UNKNOWN:
+      RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+        "Unknown data type of value %s at line %d\n", value, line_num);
+      ret = RCUTILS_RET_ERROR;
+      break;
+    case DATA_TYPE_BOOL:
+      RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+        "'bool' type is not used for thread attribute (%s at line %d)\n", value, line_num);
+      ret = RCUTILS_RET_ERROR;
+      break;
+    case DATA_TYPE_INT64:
+      if (!is_seq) {
+        RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+          "The given set of scheduling parameter could not be parsed (%s at line %d)\n", value,
+          line_num);
+        ret = RCUTILS_RET_ERROR;
+        break;
+      } else {
+        if (DATA_TYPE_UNKNOWN == *seq_data_type) {
+          thread_attrs->attributes[sequence].core_affinity = atoi(value);
+          *seq_data_type = val_type;
+        } else if (DATA_TYPE_STRING == *seq_data_type) {
+          thread_attrs->attributes[sequence].priority = atoi(value);
+          *seq_data_type = val_type;
+        } else {
+          if (*seq_data_type != val_type) {
+            RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+              "not thread format %d",
+              line_num);
+            allocator.deallocate(ret_val, allocator.state);
+            ret = RCUTILS_RET_ERROR;
+            break;
+          }
+        }
+        if (RCUTILS_RET_OK != ret) {
+          if (NULL != ret_val) {
+            allocator.deallocate(ret_val, allocator.state);
+          }
+        }
+      }
+      break;
+    case DATA_TYPE_DOUBLE:
+      RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+        "'double' type is not used for thread attribute (%s at line %d)\n", value, line_num);
+      ret = RCUTILS_RET_ERROR;
+      break;
+    case DATA_TYPE_STRING:
+      if (!is_seq) {
+        RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+          "The given set of scheduling parameter could not be parsed (%s at line %d)\n", value,
+          line_num);
+        ret = RCUTILS_RET_ERROR;
+        break;
+      } else {
+        if (DATA_TYPE_INT64 == *seq_data_type) {
+          thread_attrs->attributes[sequence].scheduling_policy = (int)set_scheduling_policy(value);
+          *seq_data_type = val_type;
+        } else {
+          if (*seq_data_type != val_type) {
+            RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+              "not thread format %d",
+              line_num);
+            allocator.deallocate(ret_val, allocator.state);
+            ret = RCUTILS_RET_ERROR;
+            break;
+          }
+        }
+        if (RCUTILS_RET_OK != ret) {
+          if (NULL != ret_val) {
+            allocator.deallocate(ret_val, allocator.state);
+          }
+        }
+      }
+      break;
+    default:
+      RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
+        "Unknown data type of value %s at line %d", value, line_num);
+      ret = RCUTILS_RET_ERROR;
+      allocator.deallocate(ret_val, allocator.state);
+      break;
+  }
+  return ret;
+}
+
 rcutils_ret_t
 _validate_namespace(const char * namespace_)
 {
@@ -972,6 +1101,96 @@ rcutils_ret_t parse_value_events(
 }
 
 ///
+/// Get events from parsing a thread attribute YAML value string and process them
+///
+rcutils_ret_t parse_thread_attr_events(
+  yaml_parser_t * parser,
+  rcl_thread_attrs_t * thread_attrs)
+{
+  bool is_seq = false;
+  int sequence = -2;
+  int sequence_count = 0;
+  data_types_t seq_data_type = DATA_TYPE_UNKNOWN;
+  rcutils_ret_t ret = RCUTILS_RET_OK;
+  bool done_parsing = false;
+  while (RCUTILS_RET_OK == ret && !done_parsing) {
+    yaml_event_t event;
+    int success = yaml_parser_parse(parser, &event);
+
+    if (0 == success) {
+      RCUTILS_SET_ERROR_MSG("Error parsing an event");
+      ret = RCUTILS_RET_ERROR;
+      break;
+    }
+    switch (event.type) {
+      case YAML_STREAM_END_EVENT:
+        done_parsing = true;
+        break;
+      case YAML_SCALAR_EVENT:
+        if (sequence < 0) {
+          ret = RCUTILS_RET_ERROR;
+          RCUTILS_SET_ERROR_MSG("Thread attributes must be two-dimensional array");
+          break;
+        }
+        ret = parse_thread_attr_value(
+          event, is_seq, &seq_data_type, thread_attrs, sequence);
+        break;
+      case YAML_SEQUENCE_START_EVENT:
+        is_seq = true;
+        sequence++;
+        sequence_count++;
+        seq_data_type = DATA_TYPE_UNKNOWN;
+        // Reallocate if necessary
+        if (sequence >= (int)thread_attrs->capacity_attributes) {
+          size_t capacity_attributes = (size_t)sequence * 2;
+          size_t size = capacity_attributes * sizeof(rcl_thread_attr_t);
+          void * new_attributes = thread_attrs->allocator.reallocate(
+            thread_attrs->attributes, size, thread_attrs->allocator.state);
+          if (NULL == new_attributes) {
+            RCUTILS_SET_ERROR_MSG("Failed to reallocate memory for thread attributes");
+            ret = RCUTILS_RET_BAD_ALLOC;
+            break;
+          }
+          thread_attrs->attributes = new_attributes;
+          memset(
+            &thread_attrs->attributes[thread_attrs->capacity_attributes], 0,
+            ((size_t)capacity_attributes - thread_attrs->capacity_attributes) *
+            sizeof(rcl_thread_attr_t));
+          thread_attrs->capacity_attributes = capacity_attributes;
+        }
+        break;
+      case YAML_SEQUENCE_END_EVENT:
+        is_seq = false;
+        sequence_count--;
+        break;
+      case YAML_STREAM_START_EVENT:
+        break;
+      case YAML_DOCUMENT_START_EVENT:
+        break;
+      case YAML_DOCUMENT_END_EVENT:
+        break;
+      case YAML_NO_EVENT:
+        RCUTILS_SET_ERROR_MSG("Received an empty event");
+        ret = RCUTILS_RET_ERROR;
+        break;
+      default:
+        RCUTILS_SET_ERROR_MSG("Unknown YAML event");
+        ret = RCUTILS_RET_ERROR;
+        break;
+    }
+    yaml_event_delete(&event);
+  }
+  if (RCUTILS_RET_OK == ret && sequence_count != 0) {
+    ret = RCUTILS_RET_ERROR;
+    RCUTILS_SET_ERROR_MSG("Incorrect format for thread attributes");
+  }
+  if (RCUTILS_RET_OK == ret) {
+    thread_attrs->num_attributes = (size_t)(sequence + 1);
+  }
+  return ret;
+}
+
+///
 /// Find parameter entry index in node parameters' structure
 ///
 rcutils_ret_t find_parameter(
@@ -1055,4 +1274,28 @@ rcutils_ret_t find_node(
   }
   param_st->num_nodes++;
   return RCUTILS_RET_OK;
+}
+
+rcl_thread_scheduling_policy_type_t set_scheduling_policy(
+  const char * value)
+{
+  rcl_thread_scheduling_policy_type_t ret;
+  if (strcmp(value, "FIFO") == 0) {
+    ret = RCL_THREAD_SCHEDULING_POLICY_FIFO;
+  } else if (strcmp(value, "RR") == 0) {
+    ret = RCL_THREAD_SCHEDULING_POLICY_RR;
+  } else if (strcmp(value, "SPORADIC") == 0) {
+    ret = RCL_THREAD_SCHEDULING_POLICY_SPORADIC;
+  } else if (strcmp(value, "OTHER") == 0) {
+    ret = RCL_THREAD_SCHEDULING_POLICY_OTHER;
+  } else if (strcmp(value, "IDLE") == 0) {
+    ret = RCL_THREAD_SCHEDULING_POLICY_IDLE;
+  } else if (strcmp(value, "BATCH") == 0) {
+    ret = RCL_THREAD_SCHEDULING_POLICY_BATCH;
+  } else if (strcmp(value, "DEADLINE") == 0) {
+    ret = RCL_THREAD_SCHEDULING_POLICY_DEADLINE;
+  } else {
+    ret = RCL_THREAD_SCHEDULING_POLICY_UNKNOWN;
+  }
+  return ret;
 }

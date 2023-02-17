@@ -106,6 +106,27 @@ rcl_context_get_rmw_context(rcl_context_t * context)
 }
 
 rcl_ret_t
+rcl_context_get_thread_attrs(
+  const rcl_context_t * context,
+  rcl_thread_attrs_t ** thread_attrs)
+{
+  RCL_CHECK_ARGUMENT_FOR_NULL(context, RCL_RET_INVALID_ARGUMENT);
+  RCL_CHECK_ARGUMENT_FOR_NULL(context->impl, RCL_RET_INVALID_ARGUMENT);
+  if (NULL != *thread_attrs) {
+    RCL_SET_ERROR_MSG("Output thread attribute pointer is not null. May leak memory.");
+    return RCL_RET_INVALID_ARGUMENT;
+  }
+  *thread_attrs = NULL;
+  if (NULL != context->impl->thread_context.thread_attrs) {
+    *thread_attrs = context->impl->thread_context.thread_attrs;
+    if (NULL == *thread_attrs) {
+      return RCL_RET_INVALID_ARGUMENT;
+    }
+  }
+  return RCL_RET_OK;
+}
+
+rcl_ret_t
 __cleanup_context(rcl_context_t * context)
 {
   rcl_ret_t ret = RCL_RET_OK;
@@ -144,6 +165,21 @@ __cleanup_context(rcl_context_t * context)
         RCUTILS_SAFE_FWRITE_TO_STDERR("\n");
         rcl_reset_error();
       }
+    }
+
+    // clean up thread_attr_context
+    rcl_ret_t thread_attr_context_fini_ret =
+      thread_attr_context_fini(&(context->impl->thread_context));
+    if (RCL_RET_OK != thread_attr_context_fini_ret) {
+      if (RCL_RET_OK == ret) {
+        ret = thread_attr_context_fini_ret;
+      }
+      RCUTILS_SAFE_FWRITE_TO_STDERR(
+        "[rcl|context.c:" RCUTILS_STRINGIFY(__LINE__)
+        "] failed to finalize attr context while cleaning up context, memory may be leaked: ");
+      RCUTILS_SAFE_FWRITE_TO_STDERR(rcutils_get_error_string().str);
+      RCUTILS_SAFE_FWRITE_TO_STDERR("\n");
+      rcutils_reset_error();
     }
 
     // clean up rmw_context

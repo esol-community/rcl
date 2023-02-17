@@ -38,6 +38,8 @@ struct rcl_context_impl_s
   char ** argv;
   /// rmw context.
   rmw_context_t rmw_context;
+  /// thread attribute context.
+  thread_attr_context_t thread_context;
 };
 
 RCL_LOCAL
