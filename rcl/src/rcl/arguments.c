@@ -21,9 +21,11 @@
 
 #include "./arguments_impl.h"
 #include "./remap_impl.h"
+#include "./thread_attr_parse.h"
 #include "rcl/error_handling.h"
 #include "rcl/lexer_lookahead.h"
 #include "rcl/validate_topic_name.h"
+#include "rcl_yaml_param_parser/thread_attr.h"
 #include "rcl_yaml_param_parser/parser.h"
 #include "rcl_yaml_param_parser/types.h"
 #include "rcutils/allocator.h"
@@ -282,6 +284,12 @@ rcl_parse_arguments(
   // over-allocate arrays to match the number of arguments
   args_impl->remap_rules = allocator.allocate(sizeof(rcl_remap_t) * argc, allocator.state);
   if (NULL == args_impl->remap_rules) {
+    ret = RCL_RET_BAD_ALLOC;
+    goto fail;
+  }
+
+  args_impl->thread_attrs = rcl_thread_attrs_struct_init(allocator);
+  if (NULL == args_impl->thread_attrs) {
     ret = RCL_RET_BAD_ALLOC;
     goto fail;
   }
@@ -558,6 +566,73 @@ rcl_parse_arguments(
         i, argv[i], RCL_ENABLE_FLAG_PREFIX, RCL_LOG_EXT_LIB_FLAG_SUFFIX,
         RCL_DISABLE_FLAG_PREFIX, RCL_LOG_EXT_LIB_FLAG_SUFFIX, rcl_get_error_string().str);
       rcl_reset_error();
+
+      // Attempt to parse argument as thread attribute flag
+      if (strcmp(RCL_THREAD_ATTR_SETTING_FLAG, argv[i]) == 0) {
+        if (i + 1 < argc) {
+          if (args_impl->thread_attrs->num_attributes != 0) {
+            RCL_SET_ERROR_MSG_WITH_FORMAT_STRING(
+              "Thread attributes already setted: '%s %s'.", argv[i], argv[i + 1]);
+            ++i;
+            continue;
+          }
+          // Attempt to parse next argument as thread attribute rule
+          if (RCL_RET_OK ==
+            _rcl_parse_thread_attrs(argv[i + 1], args_impl->thread_attrs))
+          {
+            RCUTILS_LOG_DEBUG_NAMED(
+              ROS_PACKAGE_NAME, "Got thread attribute rule : %s\n", argv[i + 1]);
+            ++i;  // Skip flag here, for loop will skip rule.
+            continue;
+          }
+          rcl_error_string_t prev_error_string = rcl_get_error_string();
+          rcl_reset_error();
+          RCL_SET_ERROR_MSG_WITH_FORMAT_STRING(
+            "Couldn't parse thread attribute rule: '%s %s'. Error: %s", argv[i], argv[i + 1],
+            prev_error_string.str);
+        } else {
+          RCL_SET_ERROR_MSG_WITH_FORMAT_STRING(
+            "Couldn't parse trailing %s flag. No thread attribute rule found.", argv[i]);
+        }
+        ret = RCL_RET_INVALID_ROS_ARGS;
+        goto fail;
+      }
+      RCUTILS_LOG_DEBUG_NAMED(
+        ROS_PACKAGE_NAME, "Arg %d (%s) is not a %s flag.",
+        i, argv[i], RCL_THREAD_ATTR_SETTING_FLAG);
+
+      // Attempt to parse argument as thread attribute file rule
+      if (strcmp(RCL_THREAD_ATTR_FILE_PATH_FLAG, argv[i]) == 0) {
+        if (i + 1 < argc) {
+          if (args_impl->thread_attrs->num_attributes != 0) {
+            RCL_SET_ERROR_MSG_WITH_FORMAT_STRING(
+              "Thread attributes already setted: '%s %s'.", argv[i], argv[i + 1]);
+            ++i;
+            continue;
+          }
+          // Attempt to parse next argument as thread attribute file rule
+          if (
+            RCL_RET_OK == _rcl_parse_thread_attr_file(
+              argv[i + 1], args_impl->thread_attrs))
+          {
+            ++i;  // Skip flag here, for loop will skip rule.
+            continue;
+          }
+          rcl_error_string_t prev_error_string = rcl_get_error_string();
+          rcl_reset_error();
+          RCL_SET_ERROR_MSG_WITH_FORMAT_STRING(
+            "Couldn't parse thread attr file: '%s %s'. Error: %s", argv[i], argv[i + 1],
+            prev_error_string.str);
+        } else {
+          RCL_SET_ERROR_MSG_WITH_FORMAT_STRING(
+            "Couldn't parse trailing %s flag. No file path provided.", argv[i]);
+        }
+        ret = RCL_RET_INVALID_ROS_ARGS;
+        goto fail;
+      }
+      RCUTILS_LOG_DEBUG_NAMED(
+        ROS_PACKAGE_NAME, "Arg %d (%s) is not a %s flag.",
+        i, argv[i], RCL_THREAD_ATTR_FILE_PATH_FLAG);
 
       // Argument is an unknown ROS specific argument
       args_impl->unparsed_ros_args[args_impl->num_unparsed_ros_args] = i;
@@ -986,6 +1061,17 @@ rcl_arguments_fini(
       args->impl->allocator.deallocate(
         args->impl->external_log_config_file, args->impl->allocator.state);
       args->impl->external_log_config_file = NULL;
+    }
+
+    if (args->impl->thread_attrs) {
+      rcl_ret_t thread_ret = rcl_thread_attrs_fini(args->impl->thread_attrs);
+      if (thread_ret != RCL_RET_OK) {
+        ret = thread_ret;
+        RCUTILS_LOG_ERROR_NAMED(
+          ROS_PACKAGE_NAME,
+          "Failed to finalize thread attribute while finalizing arguments. Continuing...");
+      }
+      args->impl->thread_attrs = NULL;
     }
 
     args->impl->allocator.deallocate(args->impl, args->impl->allocator.state);
@@ -2063,12 +2149,35 @@ _rcl_allocate_initialized_arguments_impl(rcl_arguments_t * args, rcl_allocator_t
   args_impl->parameter_overrides = NULL;
   args_impl->parameter_files = NULL;
   args_impl->num_param_files_args = 0;
+  args_impl->thread_attrs = NULL;
   args_impl->log_stdout_disabled = false;
   args_impl->log_rosout_disabled = false;
   args_impl->log_ext_lib_disabled = false;
   args_impl->enclave = NULL;
   args_impl->allocator = *allocator;
 
+  return RCL_RET_OK;
+}
+
+rcl_ret_t
+rcl_arguments_get_thread_attrs(
+  const rcl_arguments_t * arguments,
+  rcl_thread_attrs_t ** thread_attrs)
+{
+  RCL_CHECK_ARGUMENT_FOR_NULL(arguments, RCL_RET_INVALID_ARGUMENT);
+  RCL_CHECK_ARGUMENT_FOR_NULL(arguments->impl, RCL_RET_INVALID_ARGUMENT);
+  RCL_CHECK_ARGUMENT_FOR_NULL(thread_attrs, RCL_RET_INVALID_ARGUMENT);
+  if (NULL != *thread_attrs) {
+    RCL_SET_ERROR_MSG("Output thread attribute pointer is not null. May leak memory.");
+    return RCL_RET_INVALID_ARGUMENT;
+  }
+  *thread_attrs = NULL;
+  if (NULL != arguments->impl->thread_attrs) {
+    *thread_attrs = arguments->impl->thread_attrs;
+    if (NULL == *thread_attrs) {
+      return RCL_RET_INVALID_ARGUMENT;
+    }
+  }
   return RCL_RET_OK;
 }
 

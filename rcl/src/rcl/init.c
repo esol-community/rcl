@@ -35,11 +35,13 @@ extern "C"
 #include "rcl/logging.h"
 #include "rcl/security.h"
 #include "rcl/validate_enclave_name.h"
+#include "rcl_yaml_param_parser/thread_attr.h"
 
 #include "./arguments_impl.h"
 #include "./common.h"
 #include "./context_impl.h"
 #include "./init_options_impl.h"
+#include "./thread_attr_parse.h"
 
 static atomic_uint_least64_t __rcl_next_unique_id = ATOMIC_VAR_INIT(1);
 
@@ -92,6 +94,9 @@ rcl_init(
 
   // Zero initialize rmw context first so its validity can by checked in cleanup.
   context->impl->rmw_context = rmw_get_zero_initialized_context();
+
+  // Zero initialize thread attribute context first so its validity can by checked in cleanup.
+  context->impl->thread_context = thread_attr_get_zero_initialized_context();
 
   // Store the allocator.
   context->impl->allocator = allocator;
@@ -254,6 +259,50 @@ rcl_init(
     RCUTILS_LOG_DEBUG_NAMED(
       ROS_PACKAGE_NAME,
       "\t%s", discovery_options->static_peers[ii].peer_address);
+  }
+
+  ret = thread_attr_context_init(&(context->impl->thread_context), allocator);
+  if (RCL_RET_OK != ret) {
+    fail_ret = ret;
+    goto fail;
+  }
+
+  if (context->global_arguments.impl->thread_attrs == NULL ||
+    context->global_arguments.impl->thread_attrs->num_attributes == 0)
+  {
+    // Get actual thread attribute based on environment variable.
+    char * thread_attr = NULL;
+    ret = rcl_get_default_thread_attrs(&thread_attr, allocator);
+    if (RCL_RET_OK != ret) {
+      fail_ret = ret;
+      goto fail;
+    }
+    if (strcmp(thread_attr, "") != 0) {
+      ret = _rcl_parse_thread_attrs(
+        thread_attr,
+        context->impl->thread_context.thread_attrs);
+      if (RCL_RET_OK != ret) {
+        fail_ret = ret;
+        goto fail;
+      }
+    } else {
+      // Get actual thread attribute file path based on environment variable.
+      char * thread_attr_file_path = NULL;
+      ret = rcl_get_default_thread_attr_file_path(&thread_attr_file_path, allocator);
+      if (RCL_RET_OK != ret) {
+        fail_ret = ret;
+        goto fail;
+      }
+      if (strcmp(thread_attr_file_path, "") != 0) {
+        ret = _rcl_parse_thread_attr_file(
+          thread_attr_file_path,
+          context->impl->thread_context.thread_attrs);
+        if (RCL_RET_OK != ret) {
+          fail_ret = ret;
+          goto fail;
+        }
+      }
+    }
   }
 
   if (context->global_arguments.impl->enclave) {

@@ -97,6 +97,16 @@ bool rcl_parse_yaml_file(
   const char * file_path,
   rcl_params_t * params_st);
 
+/// \brief Parse the YAML file and populate \p thread_attrs
+/// \pre Given \p thread_attrs must be a valid thread attribute struct
+/// \param[in] file_path is the path to the YAML file
+/// \param[inout] thread_attrs points to the struct to be populated
+/// \return true on success and false on failure
+RCL_YAML_PARAM_PARSER_PUBLIC
+bool rcl_parse_yaml_thread_attr_file(
+  const char * file_path,
+  rcl_thread_attrs_t * thread_attrs);
+
 /// \brief Parse a parameter value as a YAML string, updating params_st accordingly
 /// \param[in] node_name is the name of the node to which the parameter belongs
 /// \param[in] param_name is the name of the parameter whose value will be parsed
@@ -109,6 +119,15 @@ bool rcl_parse_yaml_value(
   const char * param_name,
   const char * yaml_value,
   rcl_params_t * params_st);
+
+/// \brief Parse a thread attribute value as a YAML string, updating thread_attrs accordingly
+/// \param[in] yaml_value is the thread attribute value as a YAML string to be parsed
+/// \param[inout] thread_attrs points to the thread attribute struct
+/// \return true on success and false on failure
+RCL_YAML_PARAM_PARSER_PUBLIC
+bool rcl_parse_yaml_thread_attr_value(
+  const char * yaml_value,
+  rcl_thread_attrs_t * thread_attrs);
 
 /// \brief Get the variant value for a given parameter, zero initializing it in the
 /// process if not present already

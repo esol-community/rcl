@@ -51,6 +51,15 @@ rcutils_ret_t parse_value(
 
 RCL_YAML_PARAM_PARSER_PUBLIC
 RCUTILS_WARN_UNUSED
+rcutils_ret_t parse_thread_attr_value(
+  const yaml_event_t event,
+  const bool is_seq,
+  data_types_t * seq_data_type,
+  rcl_thread_attrs_t * thread_attrs,
+  int sequence);
+
+RCL_YAML_PARAM_PARSER_PUBLIC
+RCUTILS_WARN_UNUSED
 rcutils_ret_t parse_key(
   const yaml_event_t event,
   uint32_t * map_level,
@@ -77,6 +86,12 @@ rcutils_ret_t parse_value_events(
 
 RCL_YAML_PARAM_PARSER_PUBLIC
 RCUTILS_WARN_UNUSED
+rcutils_ret_t parse_thread_attr_events(
+  yaml_parser_t * parser,
+  rcl_thread_attrs_t * thread_attrs);
+
+RCL_YAML_PARAM_PARSER_PUBLIC
+RCUTILS_WARN_UNUSED
 rcutils_ret_t find_node(
   const char * node_name,
   rcl_params_t * param_st,
@@ -89,6 +104,11 @@ rcutils_ret_t find_parameter(
   const char * parameter_name,
   rcl_params_t * param_st,
   size_t * parameter_idx);
+
+RCL_YAML_PARAM_PARSER_PUBLIC
+RCUTILS_WARN_UNUSED
+rcl_thread_scheduling_policy_type_t set_scheduling_policy(
+  const char * value);
 
 #ifdef __cplusplus
 }

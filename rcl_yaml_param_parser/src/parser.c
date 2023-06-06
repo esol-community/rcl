@@ -294,6 +294,45 @@ bool rcl_parse_yaml_file(
 }
 
 ///
+/// Parse the YAML file and populate thread_attrs
+///
+bool rcl_parse_yaml_thread_attr_file(
+  const char * file_path,
+  rcl_thread_attrs_t * thread_attrs)
+{
+  RCUTILS_CHECK_FOR_NULL_WITH_MSG(
+    file_path, "YAML file path is NULL", return false);
+
+  if (NULL == thread_attrs) {
+    RCUTILS_SAFE_FWRITE_TO_STDERR("Pass an initialized thread attr structure");
+    return false;
+  }
+
+  yaml_parser_t parser;
+  int success = yaml_parser_initialize(&parser);
+  if (0 == success) {
+    RCUTILS_SET_ERROR_MSG("Could not initialize the parser");
+    return false;
+  }
+
+  FILE * yaml_file = fopen(file_path, "r");
+  if (NULL == yaml_file) {
+    yaml_parser_delete(&parser);
+    RCUTILS_SET_ERROR_MSG("Error opening YAML file");
+    return false;
+  }
+
+  yaml_parser_set_input_file(&parser, yaml_file);
+  rcutils_ret_t ret = parse_thread_attr_events(&parser, thread_attrs);
+
+  fclose(yaml_file);
+
+  yaml_parser_delete(&parser);
+
+  return RCUTILS_RET_OK == ret;
+}
+
+///
 /// Parse a YAML string and populate params_st
 ///
 bool rcl_parse_yaml_value(
@@ -338,6 +377,41 @@ bool rcl_parse_yaml_value(
     &parser, (const unsigned char *)yaml_value, strlen(yaml_value));
 
   ret = parse_value_events(&parser, node_idx, parameter_idx, params_st);
+
+  yaml_parser_delete(&parser);
+
+  return RCUTILS_RET_OK == ret;
+}
+
+///
+/// Parse a YAML string and populate thread_attrs
+///
+bool rcl_parse_yaml_thread_attr_value(
+  const char * yaml_value,
+  rcl_thread_attrs_t * thread_attrs)
+{
+  RCUTILS_CHECK_ARGUMENT_FOR_NULL(yaml_value, false);
+
+  if (0U == strlen(yaml_value)) {
+    return false;
+  }
+
+  if (NULL == thread_attrs) {
+    RCUTILS_SAFE_FWRITE_TO_STDERR("Pass an initialized thread attr structure");
+    return false;
+  }
+
+  yaml_parser_t parser;
+  int success = yaml_parser_initialize(&parser);
+  if (0 == success) {
+    RCUTILS_SET_ERROR_MSG("Could not initialize the parser");
+    return false;
+  }
+
+  yaml_parser_set_input_string(
+    &parser, (const unsigned char *)yaml_value, strlen(yaml_value));
+
+  rcutils_ret_t ret = parse_thread_attr_events(&parser, thread_attrs);
 
   yaml_parser_delete(&parser);
 

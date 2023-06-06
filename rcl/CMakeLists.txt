@@ -67,6 +67,8 @@ set(${PROJECT_NAME}_sources
   src/rcl/service.c
   src/rcl/service_event_publisher.c
   src/rcl/subscription.c
+  src/rcl/thread_attr_parse.c
+  src/rcl/thread_context.c
   src/rcl/time.c
   src/rcl/timer.c
   src/rcl/type_hash.c
