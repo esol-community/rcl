@@ -2,6 +2,55 @@
 Changelog for package rcl_action
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+9.2.1 (2024-04-16)
+------------------
+* Generate version header using ament_generate_version_header(..) (`#1141 <https://github.com/ros2/rcl/issues/1141>`_)
+* Contributors: G.A. vd. Hoorn
+
+9.2.0 (2024-03-28)
+------------------
+* add RCL_RET_TIMEOUT to action service response. (`#1138 <https://github.com/ros2/rcl/issues/1138>`_)
+  * add RCL_RET_TIMEOUT to action service response.
+  * address review comment.
+  ---------
+* Update quality declaration documents (`#1131 <https://github.com/ros2/rcl/issues/1131>`_)
+* Contributors: Christophe Bedard, Tomoya Fujita
+
+9.1.0 (2024-01-24)
+------------------
+
+9.0.0 (2023-12-26)
+------------------
+
+8.0.0 (2023-11-06)
+------------------
+
+7.3.0 (2023-10-09)
+------------------
+
+7.2.0 (2023-10-04)
+------------------
+* Remove most remaining uses of ament_target_dependencies. (`#1102 <https://github.com/ros2/rcl/issues/1102>`_)
+* Contributors: Chris Lalancette
+
+7.1.1 (2023-09-07)
+------------------
+
+7.1.0 (2023-08-21)
+------------------
+
+7.0.0 (2023-07-11)
+------------------
+* Add `~/get_type_description` service (rep2011) (`#1052 <https://github.com/ros2/rcl/issues/1052>`_)
+* Modifies timers API to select autostart state (`#1004 <https://github.com/ros2/rcl/issues/1004>`_)
+* Contributors: Eloy Briceno, Hans-Joachim Krauch
+
+6.3.0 (2023-06-12)
+------------------
+
+6.2.0 (2023-06-07)
+------------------
+
 6.1.1 (2023-05-11)
 ------------------
 

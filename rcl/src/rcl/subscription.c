@@ -23,6 +23,8 @@ extern "C"
 
 #include "rcl/error_handling.h"
 #include "rcl/node.h"
+#include "rcl/node_type_cache.h"
+#include "rcutils/env.h"
 #include "rcutils/logging_macros.h"
 #include "rcutils/strdup.h"
 #include "rcutils/types/string_array.h"
@@ -122,15 +124,28 @@ rcl_subscription_init(
     options->qos.avoid_ros_namespace_conventions;
   // options
   subscription->impl->options = *options;
+
+  if (RCL_RET_OK != rcl_node_type_cache_register_type(
+      node, type_support->get_type_hash_func(type_support),
+      type_support->get_type_description_func(type_support),
+      type_support->get_type_description_sources_func(type_support)))
+  {
+    rcutils_reset_error();
+    RCL_SET_ERROR_MSG("Failed to register type for subscription");
+    goto fail;
+  }
+  subscription->impl->type_hash = *type_support->get_type_hash_func(type_support);
+
   RCUTILS_LOG_DEBUG_NAMED(ROS_PACKAGE_NAME, "Subscription initialized");
   ret = RCL_RET_OK;
-  TRACEPOINT(
+  TRACETOOLS_TRACEPOINT(
     rcl_subscription_init,
     (const void *)subscription,
     (const void *)node,
     (const void *)subscription->impl->rmw_handle,
     remapped_topic_name,
     options->qos.depth);
+
   goto cleanup;
 fail:
   if (subscription->impl) {
@@ -192,6 +207,15 @@ rcl_subscription_fini(rcl_subscription_t * subscription, rcl_node_t * node)
       result = RCL_RET_ERROR;
     }
 
+    if (
+      ROSIDL_TYPE_HASH_VERSION_UNSET != subscription->impl->type_hash.version &&
+      RCL_RET_OK != rcl_node_type_cache_unregister_type(node, &subscription->impl->type_hash))
+    {
+      RCUTILS_SAFE_FWRITE_TO_STDERR(rcl_get_error_string().str);
+      RCUTILS_SAFE_FWRITE_TO_STDERR("\n");
+      result = RCL_RET_ERROR;
+    }
+
     allocator.deallocate(subscription->impl, allocator.state);
     subscription->impl = NULL;
   }
@@ -210,15 +234,19 @@ rcl_subscription_get_default_options()
   default_options.rmw_subscription_options = rmw_get_default_subscription_options();
 
   // Load disable flag to LoanedMessage via environmental variable.
-  bool disable_loaned_message = false;
-  rcl_ret_t ret = rcl_get_disable_loaned_message(&disable_loaned_message);
-  if (ret == RCL_RET_OK) {
-    default_options.disable_loaned_message = disable_loaned_message;
-  } else {
+  // TODO(clalancette): This is kind of a copy of rcl_get_disable_loaned_message(), but we need
+  // more information than that function provides.
+  default_options.disable_loaned_message = true;
+
+  const char * env_val = NULL;
+  const char * env_error_str = rcutils_get_env(RCL_DISABLE_LOANED_MESSAGES_ENV_VAR, &env_val);
+  if (NULL != env_error_str) {
     RCUTILS_SAFE_FWRITE_TO_STDERR("Failed to get disable_loaned_message: ");
-    RCUTILS_SAFE_FWRITE_TO_STDERR(rcl_get_error_string().str);
-    rcl_reset_error();
-    default_options.disable_loaned_message = false;
+    RCUTILS_SAFE_FWRITE_TO_STDERR_WITH_FORMAT_STRING(
+      "Error getting env var: '" RCUTILS_STRINGIFY(RCL_DISABLE_LOANED_MESSAGES_ENV_VAR) "': %s\n",
+      env_error_str);
+  } else {
+    default_options.disable_loaned_message = !(strcmp(env_val, "0") == 0);
   }
 
   return default_options;
@@ -536,7 +564,7 @@ rcl_take(
   }
   RCUTILS_LOG_DEBUG_NAMED(
     ROS_PACKAGE_NAME, "Subscription take succeeded: %s", taken ? "true" : "false");
-  TRACEPOINT(rcl_take, (const void *)ros_message);
+  TRACETOOLS_TRACEPOINT(rcl_take, (const void *)ros_message);
   if (!taken) {
     return RCL_RET_SUBSCRIPTION_TAKE_FAILED;
   }
@@ -616,6 +644,7 @@ rcl_take_serialized_message(
   }
   RCUTILS_LOG_DEBUG_NAMED(
     ROS_PACKAGE_NAME, "Subscription serialized take succeeded: %s", taken ? "true" : "false");
+  TRACETOOLS_TRACEPOINT(rcl_take, (const void *)serialized_message);
   if (!taken) {
     return RCL_RET_SUBSCRIPTION_TAKE_FAILED;
   }
@@ -714,15 +743,13 @@ rcl_subscription_get_topic_name(const rcl_subscription_t * subscription)
   return subscription->impl->rmw_handle->topic_name;
 }
 
-#define _subscription_get_options(subscription) & subscription->impl->options
-
 const rcl_subscription_options_t *
 rcl_subscription_get_options(const rcl_subscription_t * subscription)
 {
   if (!rcl_subscription_is_valid(subscription)) {
     return NULL;  // error already set
   }
-  return _subscription_get_options(subscription);
+  return &subscription->impl->options;
 }
 
 rmw_subscription_t *

@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="2">
   <name>rcl_lifecycle</name>
-  <version>6.1.1</version>
+  <version>9.2.1</version>
   <description>Package containing a C-based lifecycle implementation</description>
 
   <maintainer email="audrow@openrobotics.org">Audrow Nash</maintainer>
@@ -15,6 +15,7 @@
   <author email="karsten@openrobotics.org">Karsten Knese</author>
 
   <buildtool_depend>ament_cmake_ros</buildtool_depend>
+  <buildtool_depend>ament_cmake_gen_version_h</buildtool_depend>
 
   <build_depend>lifecycle_msgs</build_depend>
   <build_depend>rcl</build_depend>

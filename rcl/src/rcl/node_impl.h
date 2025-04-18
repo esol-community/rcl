@@ -1,4 +1,4 @@
-// Copyright 2015 Open Source Robotics Foundation, Inc.
+// Copyright 2023 Open Source Robotics Foundation, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef RCL__PUBLISHER_IMPL_H_
-#define RCL__PUBLISHER_IMPL_H_
+#ifndef RCL__NODE_IMPL_H_
+#define RCL__NODE_IMPL_H_
 
-#include "rmw/rmw.h"
+#include "rcl/guard_condition.h"
+#include "rcl/node_options.h"
+#include "rcl/node.h"
+#include "rcl/service.h"
+#include "rcl/types.h"
+#include "rcutils/types/hash_map.h"
+#include "rmw/types.h"
 
-#include "rcl/publisher.h"
-
-struct rcl_publisher_impl_s
+struct rcl_node_impl_s
 {
-  rcl_publisher_options_t options;
-  rmw_qos_profile_t actual_qos;
-  rcl_context_t * context;
-  rmw_publisher_t * rmw_handle;
-  rosidl_type_hash_t type_hash;
+  rcl_node_options_t options;
+  rmw_node_t * rmw_node_handle;
+  rcl_guard_condition_t * graph_guard_condition;
+  const char * logger_name;
+  const char * fq_name;
+  rcutils_hash_map_t registered_types_by_type_hash;
 };
 
-#endif  // RCL__PUBLISHER_IMPL_H_
+#endif  // RCL__NODE_IMPL_H_

@@ -14,14 +14,14 @@
 
 #include <gtest/gtest.h>
 
-#include <thread>
 #include <chrono>
+#include <filesystem>
 #include <string>
+#include <thread>
 
 #include "rcl/allocator.h"
 #include "rcl/publisher.h"
 #include "rcl/subscription.h"
-#include "rcpputils/filesystem_helper.hpp"
 #include "rcutils/env.h"
 
 #include "rcl/rcl.h"
@@ -34,17 +34,9 @@
 #include "osrf_testing_tools_cpp/scope_exit.hpp"
 #include "rcl/error_handling.h"
 
-#ifdef RMW_IMPLEMENTATION
-# define CLASSNAME_(NAME, SUFFIX) NAME ## __ ## SUFFIX
-# define CLASSNAME(NAME, SUFFIX) CLASSNAME_(NAME, SUFFIX)
-#else
-# define CLASSNAME(NAME, SUFFIX) NAME
-#endif
-
-
 /* This class is used for test_wait_for_all_acked
  */
-class CLASSNAME (TestPublisherFixtureSpecial, RMW_IMPLEMENTATION) : public ::testing::Test
+class TestPublisherFixtureSpecial : public ::testing::Test
 {
 public:
   rcl_context_t * context_ptr;
@@ -58,7 +50,7 @@ public:
       // By default, fastdds use intraprocess mode in this scenario. But this leads to high-speed
       // data transmission. test_wait_for_all_acked need low data transmission. So disable this
       // mode via fastdds profile file.
-      rcpputils::fs::path fastdds_profile(TEST_RESOURCES_DIRECTORY);
+      std::filesystem::path fastdds_profile(TEST_RESOURCES_DIRECTORY);
       fastdds_profile /= "test_profile/disable_intraprocess.xml";
       ASSERT_EQ(
         rcutils_set_env("FASTRTPS_DEFAULT_PROFILES_FILE", fastdds_profile.string().c_str()),
@@ -118,7 +110,7 @@ public:
 
 #define ONE_MEGABYTE (1024 * 1024)
 
-TEST_F(CLASSNAME(TestPublisherFixtureSpecial, RMW_IMPLEMENTATION), test_wait_for_all_acked) {
+TEST_F(TestPublisherFixtureSpecial, test_wait_for_all_acked) {
   rcl_ret_t ret;
   rcl_publisher_t publisher = rcl_get_zero_initialized_publisher();
   const rosidl_message_type_support_t * ts =
@@ -183,9 +175,7 @@ TEST_F(CLASSNAME(TestPublisherFixtureSpecial, RMW_IMPLEMENTATION), test_wait_for
   EXPECT_EQ(RCL_RET_OK, ret);
 }
 
-TEST_F(
-  CLASSNAME(TestPublisherFixtureSpecial, RMW_IMPLEMENTATION),
-  test_wait_for_all_acked_with_best_effort)
+TEST_F(TestPublisherFixtureSpecial, test_wait_for_all_acked_with_best_effort)
 {
   rcl_ret_t ret;
   rcl_publisher_t publisher = rcl_get_zero_initialized_publisher();

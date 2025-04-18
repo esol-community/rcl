@@ -24,6 +24,7 @@ extern "C"
 
 #include "rcl/error_handling.h"
 #include "rcl/node.h"
+#include "rcl/node_type_cache.h"
 #include "rcl/publisher.h"
 #include "rcl/time.h"
 #include "rcutils/logging_macros.h"
@@ -48,6 +49,7 @@ struct rcl_client_impl_s
   atomic_int_least64_t sequence_number;
   rcl_service_event_publisher_t * service_event_publisher;
   char * remapped_service_name;
+  rosidl_type_hash_t type_hash;
 };
 
 rcl_client_t
@@ -175,8 +177,27 @@ rcl_client_init(
   // options
   client->impl->options = *options;
   atomic_init(&client->impl->sequence_number, 0);
+
+  const rosidl_type_hash_t * hash = type_support->get_type_hash_func(type_support);
+  if (hash == NULL) {
+    RCL_SET_ERROR_MSG("Failed to get the type hash");
+    ret = RCL_RET_INVALID_ARGUMENT;
+    goto destroy_client;
+  }
+
+  if (RCL_RET_OK != rcl_node_type_cache_register_type(
+      node, hash, type_support->get_type_description_func(type_support),
+      type_support->get_type_description_sources_func(type_support)))
+  {
+    rcutils_reset_error();
+    RCL_SET_ERROR_MSG("Failed to register type for client");
+    ret = RCL_RET_ERROR;
+    goto destroy_client;
+  }
+  client->impl->type_hash = *hash;
+
   RCUTILS_LOG_DEBUG_NAMED(ROS_PACKAGE_NAME, "Client initialized");
-  TRACEPOINT(
+  TRACETOOLS_TRACEPOINT(
     rcl_client_init,
     (const void *)client,
     (const void *)node,
@@ -236,6 +257,14 @@ rcl_client_fini(rcl_client_t * client, rcl_node_t * node)
       result = RCL_RET_ERROR;
     }
 
+    if (
+      ROSIDL_TYPE_HASH_VERSION_UNSET != client->impl->type_hash.version &&
+      RCL_RET_OK != rcl_node_type_cache_unregister_type(node, &client->impl->type_hash))
+    {
+      RCUTILS_SAFE_FWRITE_TO_STDERR(rcl_get_error_string().str);
+      result = RCL_RET_ERROR;
+    }
+
     allocator.deallocate(client->impl->remapped_service_name, allocator.state);
     client->impl->remapped_service_name = NULL;
 
@@ -266,15 +295,13 @@ rcl_client_get_service_name(const rcl_client_t * client)
   return client->impl->rmw_handle->service_name;
 }
 
-#define _client_get_options(client) & client->impl->options;
-
 const rcl_client_options_t *
 rcl_client_get_options(const rcl_client_t * client)
 {
   if (!rcl_client_is_valid(client)) {
     return NULL;  // error already set
   }
-  return _client_get_options(client);
+  return &client->impl->options;
 }
 
 rmw_client_t *

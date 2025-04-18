@@ -34,13 +34,6 @@
 #include "rcutils/logging_macros.h"
 #include "rcutils/strdup.h"
 #include "rcutils/thread_attr.h"
-#include "rmw/validate_namespace.h"
-#include "rmw/validate_node_name.h"
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 /// Parse an argument that may or may not be a remap rule.
 /**
@@ -166,6 +159,22 @@ rcl_ret_t
 _rcl_parse_log_level(
   const char * arg,
   rcl_log_levels_t * log_levels);
+
+/// Parse an argument that may or may not be a log file name prefix.
+/**
+ * \param[in] arg the argument to parse
+ * \param[in] allocator an allocator to use
+ * \param[in,out] external log name file prefix
+ * \return RCL_RET_OK if a valid log file name prefix was parsed, or
+ * \return RCL_RET_BAD_ALLOC if an allocation failed, or
+ * \return RLC_RET_ERROR if an unspecified error occurred.
+ */
+RCL_LOCAL
+rcl_ret_t
+_rcl_parse_external_log_file_name(
+  const char * arg,
+  rcl_allocator_t allocator,
+  char ** log_file_name_prefix);
 
 /// Parse an argument that may or may not be a log configuration file.
 /**
@@ -451,6 +460,41 @@ rcl_parse_arguments(
         ROS_PACKAGE_NAME, "Arg %d (%s) is not a %s flag.",
         i, argv[i], RCL_LOG_LEVEL_FLAG);
 
+      // Attempt to parse argument as external log file name prefix
+      if (strcmp(RCL_EXTERNAL_LOG_FILE_NAME_PREFIX, argv[i]) == 0) {
+        if (i + 1 < argc) {
+          if (NULL != args_impl->external_log_file_name_prefix) {
+            RCUTILS_LOG_DEBUG_NAMED(
+              ROS_PACKAGE_NAME, "Overriding log file name : %s\n",
+              args_impl->external_log_file_name_prefix);
+            allocator.deallocate(args_impl->external_log_file_name_prefix, allocator.state);
+            args_impl->external_log_file_name_prefix = NULL;
+          }
+          if (RCL_RET_OK == _rcl_parse_external_log_file_name(
+              argv[i + 1], allocator, &args_impl->external_log_file_name_prefix))
+          {
+            RCUTILS_LOG_DEBUG_NAMED(
+              ROS_PACKAGE_NAME, "Got log file name prefix : %s\n",
+              args_impl->external_log_file_name_prefix);
+            ++i;  // Skip flag here, for loop will skip value.
+            continue;
+          }
+          rcl_error_string_t prev_error_string = rcl_get_error_string();
+          rcl_reset_error();
+          RCL_SET_ERROR_MSG_WITH_FORMAT_STRING(
+            "Couldn't parse log file name prefix: '%s %s'. Error: %s", argv[i], argv[i + 1],
+            prev_error_string.str);
+        } else {
+          RCL_SET_ERROR_MSG_WITH_FORMAT_STRING(
+            "Couldn't parse trailing %s flag. No string prefix provided.", argv[i]);
+        }
+        ret = RCL_RET_INVALID_ROS_ARGS;
+        goto fail;
+      }
+      RCUTILS_LOG_DEBUG_NAMED(
+        ROS_PACKAGE_NAME, "Arg %d (%s) is not a %s flag.",
+        i, argv[i], RCL_EXTERNAL_LOG_FILE_NAME_PREFIX);
+
       // Attempt to parse argument as log configuration file
       if (strcmp(RCL_EXTERNAL_LOG_CONFIG_FLAG, argv[i]) == 0) {
         if (i + 1 < argc) {
@@ -482,6 +526,9 @@ rcl_parse_arguments(
         ret = RCL_RET_INVALID_ROS_ARGS;
         goto fail;
       }
+      RCUTILS_LOG_DEBUG_NAMED(
+        ROS_PACKAGE_NAME, "Arg %d (%s) is not a %s flag.",
+        i, argv[i], RCL_EXTERNAL_LOG_CONFIG_FLAG);
 
       // Attempt to parse argument as a security enclave
       if (strcmp(RCL_ENCLAVE_FLAG, argv[i]) == 0 || strcmp(RCL_SHORT_ENCLAVE_FLAG, argv[i]) == 0) {
@@ -514,10 +561,9 @@ rcl_parse_arguments(
         ret = RCL_RET_INVALID_ROS_ARGS;
         goto fail;
       }
-
       RCUTILS_LOG_DEBUG_NAMED(
         ROS_PACKAGE_NAME, "Arg %d (%s) is not a %s flag.",
-        i, argv[i], RCL_EXTERNAL_LOG_CONFIG_FLAG);
+        i, argv[i], RCL_ENCLAVE_FLAG);
 
       // Attempt to parse --enable/disable-stdout-logs flag
       ret = _rcl_parse_disabling_flag(
@@ -1070,6 +1116,12 @@ rcl_arguments_fini(
       args->impl->parameter_files = NULL;
     }
     args->impl->allocator.deallocate(args->impl->enclave, args->impl->allocator.state);
+
+    if (NULL != args->impl->external_log_file_name_prefix) {
+      args->impl->allocator.deallocate(
+        args->impl->external_log_file_name_prefix, args->impl->allocator.state);
+      args->impl->external_log_file_name_prefix = NULL;
+    }
 
     if (NULL != args->impl->external_log_config_file) {
       args->impl->allocator.deallocate(
@@ -2071,6 +2123,23 @@ _rcl_parse_param_file(
 }
 
 rcl_ret_t
+_rcl_parse_external_log_file_name(
+  const char * arg,
+  rcl_allocator_t allocator,
+  char ** log_file_name_prefix)
+{
+  RCL_CHECK_ARGUMENT_FOR_NULL(arg, RCL_RET_INVALID_ARGUMENT);
+  RCL_CHECK_ARGUMENT_FOR_NULL(log_file_name_prefix, RCL_RET_INVALID_ARGUMENT);
+
+  *log_file_name_prefix = rcutils_strdup(arg, allocator);
+  if (NULL == *log_file_name_prefix) {
+    RCL_SET_ERROR_MSG("Failed to allocate memory for external log file name prefix");
+    return RCL_RET_BAD_ALLOC;
+  }
+  return RCL_RET_OK;
+}
+
+rcl_ret_t
 _rcl_parse_external_log_config_file(
   const char * arg,
   rcl_allocator_t allocator,
@@ -2152,6 +2221,7 @@ _rcl_allocate_initialized_arguments_impl(rcl_arguments_t * args, rcl_allocator_t
   args_impl->num_remap_rules = 0;
   args_impl->remap_rules = NULL;
   args_impl->log_levels = rcl_get_zero_initialized_log_levels();
+  args_impl->external_log_file_name_prefix = NULL;
   args_impl->external_log_config_file = NULL;
   args_impl->unparsed_args = NULL;
   args_impl->num_unparsed_args = 0;
@@ -2186,9 +2256,5 @@ rcl_arguments_get_thread_attrs(
     return RCL_RET_ERROR;
   }
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 /// \endcond  // Internal Doxygen documentation

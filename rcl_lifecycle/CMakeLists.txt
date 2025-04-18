@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(rcl_lifecycle)
 
 find_package(ament_cmake_ros REQUIRED)
+find_package(ament_cmake_gen_version_h REQUIRED)
 
 find_package(lifecycle_msgs REQUIRED)
 find_package(rcl REQUIRED)
@@ -48,13 +49,15 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 
-# specific order: dependents before dependencies
-ament_target_dependencies(rcl_lifecycle
-  "lifecycle_msgs"
-  "rcl"
-  "rcutils"
-  "rosidl_runtime_c"
-  "tracetools"
+target_link_libraries(${PROJECT_NAME} PUBLIC
+  ${lifecycle_msgs_TARGETS}
+  rcl::rcl
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  rcutils::rcutils
+  rosidl_runtime_c::rosidl_runtime_c
+  tracetools::tracetools
 )
 
 rcl_set_symbol_visibility_hidden(${PROJECT_NAME} LANGUAGE "C")
@@ -74,7 +77,6 @@ install(TARGETS rcl_lifecycle EXPORT rcl_lifecycle
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_lint_auto REQUIRED)
-  find_package(rcl REQUIRED)
   find_package(osrf_testing_tools_cpp REQUIRED)
   ament_lint_auto_find_test_dependencies()
 
@@ -83,11 +85,13 @@ if(BUILD_TESTING)
     test/test_default_state_machine.cpp
   )
   if(TARGET test_default_state_machine)
-    ament_target_dependencies(test_default_state_machine
-      "rcl"
-      "osrf_testing_tools_cpp"
+    target_link_libraries(test_default_state_machine
+      ${PROJECT_NAME}
+      ${lifecycle_msgs_TARGETS}
+      osrf_testing_tools_cpp::memory_tools
+      rcl::rcl
+      rcutils::rcutils
     )
-    target_link_libraries(test_default_state_machine ${PROJECT_NAME})
     target_compile_definitions(test_default_state_machine
       PUBLIC RCUTILS_ENABLE_FAULT_INJECTION
     )
@@ -96,21 +100,19 @@ if(BUILD_TESTING)
     test/test_multiple_instances.cpp
   )
   if(TARGET test_multiple_instances)
-    ament_target_dependencies(test_multiple_instances
-      "rcl"
-      "osrf_testing_tools_cpp"
-    )
-    target_link_libraries(test_multiple_instances ${PROJECT_NAME})
+    target_link_libraries(test_multiple_instances ${PROJECT_NAME} ${lifecycle_msgs_TARGETS} osrf_testing_tools_cpp::memory_tools rcl::rcl)
   endif()
   ament_add_gtest(test_rcl_lifecycle
     test/test_rcl_lifecycle.cpp
   )
   if(TARGET test_rcl_lifecycle)
-    ament_target_dependencies(test_rcl_lifecycle
-      "rcl"
-      "osrf_testing_tools_cpp"
+    target_link_libraries(test_rcl_lifecycle
+      ${PROJECT_NAME}
+      ${lifecycle_msgs_TARGETS}
+      osrf_testing_tools_cpp::memory_tools
+      rcl::rcl
+      rcutils::rcutils
     )
-    target_link_libraries(test_rcl_lifecycle ${PROJECT_NAME})
     target_compile_definitions(test_rcl_lifecycle
       PUBLIC RCUTILS_ENABLE_FAULT_INJECTION
     )
@@ -119,10 +121,7 @@ if(BUILD_TESTING)
     test/test_transition_map.cpp
   )
   if(TARGET test_transition_map)
-    ament_target_dependencies(test_transition_map
-      "rcl"
-    )
-    target_link_libraries(test_transition_map ${PROJECT_NAME})
+    target_link_libraries(test_transition_map ${PROJECT_NAME} rcl::rcl)
   endif()
 endif()
 
@@ -133,13 +132,11 @@ ament_export_libraries(${PROJECT_NAME})
 # Export modern CMake targets
 ament_export_targets(${PROJECT_NAME})
 
-# specific order: dependents before dependencies
-ament_export_dependencies(ament_cmake)
 ament_export_dependencies(lifecycle_msgs)
 ament_export_dependencies(rcl)
-ament_export_dependencies(rcutils)
-ament_export_dependencies(rosidl_runtime_c)
-ament_export_dependencies(tracetools)
+
+ament_generate_version_header(${PROJECT_NAME})
+
 ament_package()
 
 install(
