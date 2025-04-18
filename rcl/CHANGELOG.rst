@@ -2,6 +2,44 @@
 Changelog for package rcl
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+9.2.5 (2025-04-02)
+------------------
+* use rmw_event_type_is_supported (backport `#1214 <https://github.com/ros2/rcl/issues/1214>`_) (`#1215 <https://github.com/ros2/rcl/issues/1215>`_)
+  * use rmw_event_type_is_supported (`#1214 <https://github.com/ros2/rcl/issues/1214>`_)
+  (cherry picked from commit ddae02ffeff4f43c7b5f618aced78f7f1c3d9c1f)
+* Relieve timer test period not to miss the cycle. (`#1209 <https://github.com/ros2/rcl/issues/1209>`_) (`#1210 <https://github.com/ros2/rcl/issues/1210>`_)
+  (cherry picked from commit 168ea9bb18507999c7011faaf8f3e527d69419f0)
+  Co-authored-by: Tomoya Fujita <Tomoya.Fujita@sony.com>
+* Contributors: mergify[bot]
+
+9.2.4 (2024-09-19)
+------------------
+* Properly initialize the char array used in type hash calculations. (`#1182 <https://github.com/ros2/rcl/issues/1182>`_) (`#1183 <https://github.com/ros2/rcl/issues/1183>`_)
+  Previously, we were zero initializing it and only setting
+  up one of its fields.  But that doesn't totally properly
+  initialize it; we really should call rcutils_char_array_init
+  to make sure everything is initialized.  Do that in the
+  live source, as well as in the test for it.
+  (cherry picked from commit bfe00f71b7056bb64b27a8d5f5bacefe0564c43e)
+  Co-authored-by: Chris Lalancette <clalancette@gmail.com>
+* Contributors: mergify[bot]
+
+9.2.3 (2024-05-13)
+------------------
+* Fix up rmw_cyclonedds timestamp testing. (`#1156 <https://github.com/ros2/rcl/issues/1156>`_) (`#1157 <https://github.com/ros2/rcl/issues/1157>`_)
+  We are about to fix it so that rmw_cyclonedds has receive_timestamp
+  support, so we also need to enable that support here
+  in rcl.  We actually rewrite the logic a bit because now the
+  only combination that doesn't work is rmw_connextdds on Windows.
+  (cherry picked from commit 6d53d24a863c3e9e4a41e9fe5f550271210d9d9d)
+  Co-authored-by: Chris Lalancette <clalancette@gmail.com>
+* Contributors: mergify[bot]
+
+9.2.2 (2024-04-24)
+------------------
+* Fixed warnings - strict-prototypes (`#1148 <https://github.com/ros2/rcl/issues/1148>`_) (`#1150 <https://github.com/ros2/rcl/issues/1150>`_)
+* Contributors: mergify[bot]
+
 9.2.1 (2024-04-16)
 ------------------
 * chore: Minor style improvements (`#1147 <https://github.com/ros2/rcl/issues/1147>`_)

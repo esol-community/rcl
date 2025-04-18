@@ -2,6 +2,20 @@
 Changelog for package rcl_lifecycle
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+9.2.5 (2025-04-02)
+------------------
+
+9.2.4 (2024-09-19)
+------------------
+
+9.2.3 (2024-05-13)
+------------------
+
+9.2.2 (2024-04-24)
+------------------
+* Fixed warnings - strict-prototypes (`#1148 <https://github.com/ros2/rcl/issues/1148>`_) (`#1150 <https://github.com/ros2/rcl/issues/1150>`_)
+* Contributors: mergify[bot]
+
 9.2.1 (2024-04-16)
 ------------------
 * Generate version header using ament_generate_version_header(..) (`#1141 <https://github.com/ros2/rcl/issues/1141>`_)
