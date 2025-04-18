@@ -20,8 +20,11 @@
 #include "rcl/allocator.h"
 #include "rcl/error_handling.h"
 #include "rcl/node.h"
+#include "rcl/macros.h"
 #include "rcl/types.h"
 #include "rcl/visibility_control.h"
+
+#include "rmw/qos_profiles.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -34,6 +37,7 @@ extern "C"
  * - durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL
  * - lifespan = {10, 0}
  */
+RCUTILS_DEPRECATED_WITH_MSG("use rmw_qos_profile_rosout_default instead")
 static const rmw_qos_profile_t rcl_qos_profile_rosout_default =
 {
   RMW_QOS_POLICY_HISTORY_KEEP_LAST,
@@ -91,7 +95,7 @@ rcl_logging_rosout_init(
 RCL_PUBLIC
 RCL_WARN_UNUSED
 rcl_ret_t
-rcl_logging_rosout_fini();
+rcl_logging_rosout_fini(void);
 
 /// Creates a rosout publisher for a node and registers it to be used by the logging system
 /**

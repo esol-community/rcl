@@ -28,14 +28,10 @@ extern "C"
 #include "rcl_lifecycle/transition_map.h"
 
 rcl_lifecycle_transition_map_t
-rcl_lifecycle_get_zero_initialized_transition_map()
+rcl_lifecycle_get_zero_initialized_transition_map(void)
 {
+  // All members are initialized to 0 or NULL by C99 6.7.8/10.
   static rcl_lifecycle_transition_map_t transition_map;
-  transition_map.states = NULL;
-  transition_map.states_size = 0;
-  transition_map.transitions = NULL;
-  transition_map.transitions_size = 0;
-
   return transition_map;
 }
 
@@ -111,7 +107,7 @@ rcl_lifecycle_register_state(
     new_states_size * sizeof(rcl_lifecycle_state_t),
     allocator->state);
   RCL_CHECK_FOR_NULL_WITH_MSG(
-    new_states, "failed to reallocate memory for new states\n", return RCL_RET_BAD_ALLOC);
+    new_states, "failed to reallocate memory for new states", return RCL_RET_BAD_ALLOC);
   transition_map->states_size = new_states_size;
   transition_map->states = new_states;
   transition_map->states[transition_map->states_size - 1] = state;

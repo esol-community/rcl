@@ -654,9 +654,7 @@ TEST_F(WaitSetTestFixture, multi_wait_set_threaded) {
       return false;
     };
   // *INDENT-ON*
-  size_t loop_count = 0;
   while (loop_test()) {
-    loop_count++;
     for (auto & test_set : test_sets) {
       ret = rcl_trigger_guard_condition(&test_set.guard_condition);
       ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
@@ -852,8 +850,7 @@ TEST_F(WaitSetTestFixture, wait_set_failed_init) {
     "lib:rcl", rmw_create_wait_set, nullptr);
   rcl_ret_t ret =
     rcl_wait_set_init(&wait_set, 1, 1, 1, 1, 1, 0, context_ptr, rcl_get_default_allocator());
-  EXPECT_EQ(RCL_RET_WAIT_SET_INVALID, ret);
-  EXPECT_TRUE(rcl_error_is_set());
+  EXPECT_EQ(RCL_RET_BAD_ALLOC, ret);
   rcl_reset_error();
 }
 

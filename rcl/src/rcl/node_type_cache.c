@@ -59,6 +59,7 @@ rcl_ret_t rcl_node_type_cache_init(rcl_node_t * node)
     &node->context->impl->allocator);
 
   if (RCUTILS_RET_OK != ret) {
+    rcl_reset_error();
     RCL_SET_ERROR_MSG("Failed to initialize type cache hash map");
     return RCL_RET_ERROR;
   }
@@ -187,6 +188,8 @@ rcl_ret_t rcl_node_type_cache_register_type(
       &node->impl->registered_types_by_type_hash,
       type_hash, &type_info_with_registrations))
   {
+    // Reset the error since rcutils_hash_map_set already set it
+    rcutils_reset_error();
     RCL_SET_ERROR_MSG("Failed to update type info");
     type_description_interfaces__msg__TypeDescription__destroy(
       type_info_with_registrations.type_info.type_description);

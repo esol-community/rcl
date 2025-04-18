@@ -874,10 +874,9 @@ rcl_arguments_get_unparsed_ros(
 rcl_arguments_t
 rcl_get_zero_initialized_arguments(void)
 {
-  static rcl_arguments_t default_arguments = {
-    .impl = NULL
-  };
-  return default_arguments;
+  // All members are initialized to 0 or NULL by C99 6.7.8/10.
+  static rcl_arguments_t zero_arguments;
+  return zero_arguments;
 }
 
 rcl_ret_t
@@ -1311,10 +1310,10 @@ _rcl_parse_resource_match_token(rcl_lexer_lookahead2_t * lex_lookahead)
     ret = rcl_lexer_lookahead2_accept(lex_lookahead, NULL, NULL);
   } else if (RCL_LEXEME_WILD_ONE == lexeme) {
     RCL_SET_ERROR_MSG("Wildcard '*' is not implemented");
-    return RCL_RET_ERROR;
+    ret = RCL_RET_ERROR;
   } else if (RCL_LEXEME_WILD_MULTI == lexeme) {
     RCL_SET_ERROR_MSG("Wildcard '**' is not implemented");
-    return RCL_RET_ERROR;
+    ret = RCL_RET_ERROR;
   } else {
     RCL_SET_ERROR_MSG("Expecting token or wildcard");
     ret = RCL_RET_WRONG_LEXEME;
@@ -1374,6 +1373,9 @@ _rcl_parse_resource_match(
     ret = rcl_lexer_lookahead2_expect(lex_lookahead, RCL_LEXEME_FORWARD_SLASH, NULL, NULL);
     if (RCL_RET_WRONG_LEXEME == ret) {
       return RCL_RET_INVALID_REMAP_RULE;
+    } else if (RCL_RET_OK != ret) {
+      // Another failure
+      return ret;
     }
     ret = _rcl_parse_resource_match_token(lex_lookahead);
     if (RCL_RET_OK != ret) {

@@ -40,9 +40,10 @@ extern "C"
 
 
 rcl_subscription_t
-rcl_get_zero_initialized_subscription()
+rcl_get_zero_initialized_subscription(void)
 {
-  static rcl_subscription_t null_subscription = {0};
+  // All members are initialized to 0 or NULL by C99 6.7.8/10.
+  static rcl_subscription_t null_subscription;
   return null_subscription;
 }
 
@@ -99,8 +100,11 @@ rcl_subscription_init(
     1, sizeof(rcl_subscription_impl_t), allocator->state);
   RCL_CHECK_FOR_NULL_WITH_MSG(
     subscription->impl, "allocating memory failed", ret = RCL_RET_BAD_ALLOC; goto cleanup);
+
+  // options
+  subscription->impl->options = *options;
+
   // Fill out the implemenation struct.
-  // rmw_handle
   // TODO(wjwwood): pass allocator once supported in rmw api.
   subscription->impl->rmw_handle = rmw_create_subscription(
     rcl_node_get_rmw_handle(node),
@@ -122,8 +126,6 @@ rcl_subscription_init(
   }
   subscription->impl->actual_qos.avoid_ros_namespace_conventions =
     options->qos.avoid_ros_namespace_conventions;
-  // options
-  subscription->impl->options = *options;
 
   if (RCL_RET_OK != rcl_node_type_cache_register_type(
       node, type_support->get_type_hash_func(type_support),
@@ -224,10 +226,10 @@ rcl_subscription_fini(rcl_subscription_t * subscription, rcl_node_t * node)
 }
 
 rcl_subscription_options_t
-rcl_subscription_get_default_options()
+rcl_subscription_get_default_options(void)
 {
   // !!! MAKE SURE THAT CHANGES TO THESE DEFAULTS ARE REFLECTED IN THE HEADER DOC STRING
-  static rcl_subscription_options_t default_options;
+  rcl_subscription_options_t default_options;
   // Must set these after declaration because they are not a compile time constants.
   default_options.qos = rmw_qos_profile_default;
   default_options.allocator = rcl_get_default_allocator();
@@ -382,7 +384,7 @@ failed:
 }
 
 rcl_subscription_content_filter_options_t
-rcl_get_zero_initialized_subscription_content_filter_options()
+rcl_get_zero_initialized_subscription_content_filter_options(void)
 {
   return (const rcl_subscription_content_filter_options_t) {
            .rmw_subscription_content_filter_options =

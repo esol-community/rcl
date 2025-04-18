@@ -2,6 +2,32 @@
 Changelog for package rcl_yaml_param_parser
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+10.1.0 (2025-04-04)
+-------------------
+
+10.0.2 (2025-01-31)
+-------------------
+* Cleanup errors after error paths in rcl_yaml_param_parser tests. (`#1203 <https://github.com/ros2/rcl/issues/1203>`_)
+  This gets rid of ugly "overwritten" warnings in the tests.
+* Contributors: Chris Lalancette
+
+10.0.1 (2024-11-20)
+-------------------
+
+10.0.0 (2024-10-03)
+-------------------
+
+9.4.1 (2024-07-29)
+------------------
+
+9.4.0 (2024-06-17)
+------------------
+* Add 'mimick' label to tests which use Mimick (`#1152 <https://github.com/ros2/rcl/issues/1152>`_)
+* Contributors: Scott K Logan
+
+9.3.0 (2024-04-26)
+------------------
+
 9.2.1 (2024-04-16)
 ------------------
 * Generate version header using ament_generate_version_header(..) (`#1141 <https://github.com/ros2/rcl/issues/1141>`_)

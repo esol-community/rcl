@@ -22,7 +22,6 @@
 #include "rcl/arguments.h"
 #include "rcl/error_handling.h"
 #include "rcl/init_options.h"
-#include "rcl/localhost.h"
 #include "rcl/logging.h"
 #include "rcl/logging_rosout.h"
 #include "rcl/node_type_cache.h"
@@ -96,12 +95,10 @@ const char * rcl_create_node_logger_name(
 }
 
 rcl_node_t
-rcl_get_zero_initialized_node()
+rcl_get_zero_initialized_node(void)
 {
-  static rcl_node_t null_node = {
-    .context = 0,
-    .impl = 0
-  };
+  // All members are initialized to 0 or NULL by C99 6.7.8/10.
+  static rcl_node_t null_node;
   return null_node;
 }
 

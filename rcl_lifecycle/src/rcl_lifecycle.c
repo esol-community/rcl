@@ -37,7 +37,7 @@ extern "C"
 #include "./com_interface.h"
 
 rcl_lifecycle_state_t
-rcl_lifecycle_get_zero_initialized_state()
+rcl_lifecycle_get_zero_initialized_state(void)
 {
   rcl_lifecycle_state_t state;
   state.id = 0;
@@ -94,7 +94,7 @@ rcl_lifecycle_state_fini(
 }
 
 rcl_lifecycle_transition_t
-rcl_lifecycle_get_zero_initialized_transition()
+rcl_lifecycle_get_zero_initialized_transition(void)
 {
   rcl_lifecycle_transition_t transition;
   transition.id = 0;
@@ -168,7 +168,7 @@ rcl_lifecycle_transition_fini(
 }
 
 rcl_lifecycle_state_machine_options_t
-rcl_lifecycle_get_default_state_machine_options()
+rcl_lifecycle_get_default_state_machine_options(void)
 {
   rcl_lifecycle_state_machine_options_t options;
   options.enable_com_interface = true;
@@ -180,7 +180,7 @@ rcl_lifecycle_get_default_state_machine_options()
 
 // get zero initialized state machine here
 rcl_lifecycle_state_machine_t
-rcl_lifecycle_get_zero_initialized_state_machine()
+rcl_lifecycle_get_zero_initialized_state_machine(void)
 {
   rcl_lifecycle_state_machine_t state_machine;
   state_machine.current_state = NULL;
@@ -426,6 +426,26 @@ rcl_print_state_machine(const rcl_lifecycle_state_machine_t * state_machine)
         map->states[i].label,
         map->states[i].valid_transitions[j].label);
     }
+  }
+}
+
+void
+rcl_print_transition_map(const rcl_lifecycle_transition_map_t * transition_map)
+{
+  RCL_CHECK_FOR_NULL_WITH_MSG(transition_map, "transition map is null.", return);
+
+  RCUTILS_LOG_INFO_NAMED(
+    ROS_PACKAGE_NAME,
+    "Transition Map contains %u transitions: ", transition_map->transitions_size);
+
+  for (size_t i = 0; i < transition_map->transitions_size; ++i) {
+    const rcl_lifecycle_transition_t * transition = &transition_map->transitions[i];
+    RCUTILS_LOG_INFO_NAMED(
+      ROS_PACKAGE_NAME,
+      "\tTransition: %s (ID: %u) -> Start State: %s -> Goal State: %s",
+      transition->label, transition->id,
+      transition->start ? transition->start->label : "NULL",
+      transition->goal ? transition->goal->label : "NULL");
   }
 }
 #ifdef __cplusplus
