@@ -55,6 +55,7 @@ target_link_libraries(test_timer ${PROJECT_NAME} osrf_testing_tools_cpp::memory_
 ament_add_gtest_executable(test_context
   rcl/test_context.cpp
 )
+target_include_directories(test_context PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src/rcl/)
 target_link_libraries(test_context ${PROJECT_NAME} mimick osrf_testing_tools_cpp::memory_tools)
 
 ament_add_gtest_executable(test_get_node_names
