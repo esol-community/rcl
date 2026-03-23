@@ -225,6 +225,7 @@ rcl_lifecycle_get_zero_initialized_state_machine(void);
  * \param[inout] state_machine struct to be initialized
  * \param[in] node_handle a valid (not finalized) handle to the node used to create the publisher
  *    and the services
+ * \param[in] clock the clock associated with the node used for time stamping transition events
  * \param[in] ts_pub_notify pointer to transition publisher, it used to publish the transitions
  * \param[in] ts_srv_change_state pointer to the service that allows to trigger changes on the state
  * \param[in] ts_srv_get_state pointer to the service that allows to get the current state
@@ -244,6 +245,7 @@ rcl_ret_t
 rcl_lifecycle_state_machine_init(
   rcl_lifecycle_state_machine_t * state_machine,
   rcl_node_t * node_handle,
+  rcl_clock_t * clock,
   const rosidl_message_type_support_t * ts_pub_notify,
   const rosidl_service_type_support_t * ts_srv_change_state,
   const rosidl_service_type_support_t * ts_srv_get_state,
@@ -350,6 +352,30 @@ const rcl_lifecycle_transition_t *
 rcl_lifecycle_get_transition_by_label(
   const rcl_lifecycle_state_t * state,
   const char * label);
+
+/// Get a label by id.
+/**
+ * A string label is returned based on the `id`.
+ * If the `id` is not set in the transition map then returns NULL.
+ *
+ * <hr>
+ * Attribute          | Adherence
+ * ------------------ | -------------
+ * Allocates Memory   | No
+ * Thread-Safe        | No
+ * Uses Atomics       | No
+ * Lock-Free          | Yes
+ *
+ * \param[in] transition_map pointer to the transition map
+ * \param[in] transition_id id to be find in the transitions map
+ * \return a string pointer to the label exists in the transitino map or otherwise it return NULL
+ */
+RCL_LIFECYCLE_PUBLIC
+RCL_WARN_UNUSED
+const char *
+rcl_lifecycle_get_transition_label_by_id(
+  const rcl_lifecycle_transition_map_t * transition_map,
+  uint8_t transition_id);
 
 /// Trigger a state by id.
 /**

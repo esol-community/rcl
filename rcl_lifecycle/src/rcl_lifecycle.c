@@ -194,6 +194,7 @@ rcl_ret_t
 rcl_lifecycle_state_machine_init(
   rcl_lifecycle_state_machine_t * state_machine,
   rcl_node_t * node_handle,
+  rcl_clock_t * clock,
   const rosidl_message_type_support_t * ts_pub_notify,
   const rosidl_service_type_support_t * ts_srv_change_state,
   const rosidl_service_type_support_t * ts_srv_get_state,
@@ -208,6 +209,9 @@ rcl_lifecycle_state_machine_init(
   RCL_CHECK_FOR_NULL_WITH_MSG(
     node_handle, "Node handle is null\n", return RCL_RET_INVALID_ARGUMENT);
 
+  RCL_CHECK_FOR_NULL_WITH_MSG(
+    clock, "Clock is null\n", return RCL_RET_INVALID_ARGUMENT);
+
   RCL_CHECK_ALLOCATOR_WITH_MSG(
     &state_machine_options->allocator, "can't initialize state machine, no allocator given\n",
     return RCL_RET_INVALID_ARGUMENT);
@@ -218,7 +222,7 @@ rcl_lifecycle_state_machine_init(
   if (state_machine->options.enable_com_interface) {
     rcl_ret_t ret = rcl_lifecycle_com_interface_init(
       &state_machine->com_interface, node_handle,
-      ts_pub_notify,
+      clock, ts_pub_notify,
       ts_srv_change_state, ts_srv_get_state,
       ts_srv_get_available_states, ts_srv_get_available_transitions, ts_srv_get_transition_graph);
     if (ret != RCL_RET_OK) {
@@ -226,7 +230,7 @@ rcl_lifecycle_state_machine_init(
     }
   } else {
     rcl_ret_t ret = rcl_lifecycle_com_interface_publisher_init(
-      &state_machine->com_interface, node_handle, ts_pub_notify);
+      &state_machine->com_interface, node_handle, clock, ts_pub_notify);
     if (ret != RCL_RET_OK) {
       return RCL_RET_ERROR;
     }
@@ -345,6 +349,24 @@ rcl_lifecycle_get_transition_by_label(
   return NULL;
 }
 
+const char *
+rcl_lifecycle_get_transition_label_by_id(
+  const rcl_lifecycle_transition_map_t * transition_map,
+  uint8_t transition_id)
+{
+  RCL_CHECK_FOR_NULL_WITH_MSG(
+    transition_map, "transition_map pointer is null\n", return NULL);
+
+  for (unsigned int i = 0; i < transition_map->transitions_size; ++i) {
+    if (transition_map->transitions[i].id == transition_id) {
+      return transition_map->transitions[i].label;
+    }
+  }
+
+  RCL_SET_ERROR_MSG_WITH_FORMAT_STRING("transition with id %u not found\n", transition_id);
+  return NULL;
+}
+
 rcl_ret_t
 _trigger_transition(
   rcl_lifecycle_state_machine_t * state_machine,
@@ -361,7 +383,7 @@ _trigger_transition(
 
   if (publish_notification) {
     rcl_ret_t fcn_ret = rcl_lifecycle_com_interface_publish_notification(
-      &state_machine->com_interface, transition->start, state_machine->current_state);
+      &state_machine->com_interface, transition);
     if (fcn_ret != RCL_RET_OK) {
       rcl_error_string_t error_string = rcl_get_error_string();
       rcutils_reset_error();

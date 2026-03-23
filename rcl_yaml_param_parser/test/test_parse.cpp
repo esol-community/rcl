@@ -16,6 +16,9 @@
 
 #include <yaml.h>
 
+#include <cstring>
+#include <locale>
+
 #include "osrf_testing_tools_cpp/scope_exit.hpp"
 #include "rcl_yaml_param_parser/parser.h"
 #include "../src/impl/parse.h"
@@ -116,6 +119,86 @@ TEST(TestParse, parse_value) {
   allocator.deallocate(
     params_st->params[node_idx].parameter_values[parameter_idx].string_value, allocator.state);
   params_st->params[node_idx].parameter_values[parameter_idx].string_value = nullptr;
+
+  // byte value
+  yaml_char_t byte_value[] = "AQID";  // [0x01, 0x02, 0x03]
+  const size_t byte_value_length = strlen((const char *)byte_value);
+  event.data.scalar.value = byte_value;
+  event.data.scalar.length = byte_value_length;
+  // Set tag, needed to parse base64 encoded binary
+  yaml_char_t tag_value[] = "tag:yaml.org,2002:binary";
+  event.data.scalar.tag = tag_value;
+
+  seq_data_type = DATA_TYPE_UNKNOWN;
+  EXPECT_EQ(
+    RCUTILS_RET_OK,
+    parse_value(event, is_seq, node_idx, parameter_idx, &seq_data_type, params_st)) <<
+    rcutils_get_error_string().str;
+  ASSERT_NE(
+    nullptr, params_st->params[node_idx].parameter_values[parameter_idx].byte_array_value);
+  EXPECT_EQ(
+    params_st->params[node_idx].parameter_values[parameter_idx].byte_array_value->size, 3);
+  EXPECT_EQ(
+    params_st->params[node_idx].parameter_values[parameter_idx].byte_array_value->values[0], 1);
+  EXPECT_EQ(
+    params_st->params[node_idx].parameter_values[parameter_idx].byte_array_value->values[1], 2);
+  EXPECT_EQ(
+    params_st->params[node_idx].parameter_values[parameter_idx].byte_array_value->values[2], 3);
+  allocator.deallocate(
+    params_st->params[node_idx].parameter_values[parameter_idx].byte_array_value->values,
+    allocator.state);
+  allocator.deallocate(
+    params_st->params[node_idx].parameter_values[parameter_idx].byte_array_value, allocator.state);
+  params_st->params[node_idx].parameter_values[parameter_idx].byte_array_value = nullptr;
+  // reset tag
+  event.data.scalar.tag = NULL;
+}
+
+TEST(TestParse, parse_value_locale_independent) {
+  if (!std::setlocale(LC_NUMERIC, "fr_FR.UTF-8") && !std::setlocale(LC_NUMERIC, "de_DE.UTF-8")) {
+    GTEST_SKIP() << "Could not set LC_NUMERIC to FR or DE";
+  }
+  OSRF_TESTING_TOOLS_CPP_SCOPE_EXIT(
+  {
+    std::setlocale(LC_NUMERIC, "C");
+  });
+
+  rcutils_allocator_t allocator = rcutils_get_default_allocator();
+  yaml_event_t event;
+  event.type = YAML_NO_EVENT;
+  event.start_mark = {0u, 0u, 0u};
+  event.end_mark = {0u, 0u, 0u};
+  event.data.scalar = {NULL, NULL, NULL, 1u, 0, 0, YAML_ANY_SCALAR_STYLE};
+
+  bool is_seq = false;
+  size_t node_idx = 0u;
+  size_t parameter_idx = 0u;
+  data_types_t seq_data_type = DATA_TYPE_UNKNOWN;
+  rcl_params_t * params_st = rcl_yaml_node_struct_init(allocator);
+  ASSERT_NE(nullptr, params_st);
+  OSRF_TESTING_TOOLS_CPP_SCOPE_EXIT(
+  {
+    rcl_yaml_node_struct_fini(params_st);
+  });
+
+  ASSERT_EQ(RCUTILS_RET_OK, node_params_init(&params_st->params[0], allocator));
+  params_st->num_nodes = 1u;
+
+  // double value
+  yaml_char_t double_value[] = "3.14159";
+  const size_t double_value_length = sizeof(double_value) / sizeof(double_value[0]);
+  event.data.scalar.value = double_value;
+  event.data.scalar.length = double_value_length;
+
+  EXPECT_EQ(
+    RCUTILS_RET_OK,
+    parse_value(event, is_seq, node_idx, parameter_idx, &seq_data_type, params_st)) <<
+    rcutils_get_error_string().str;
+  ASSERT_NE(nullptr, params_st->params[node_idx].parameter_values[parameter_idx].double_value);
+  EXPECT_EQ(3.14159, *params_st->params[node_idx].parameter_values[parameter_idx].double_value);
+  allocator.deallocate(
+    params_st->params[node_idx].parameter_values[parameter_idx].double_value, allocator.state);
+  params_st->params[node_idx].parameter_values[parameter_idx].double_value = nullptr;
 }
 
 TEST(TestParse, parse_value_sequence) {
@@ -154,7 +237,7 @@ TEST(TestParse, parse_value_sequence) {
     rcutils_get_error_string().str;
   EXPECT_EQ(
     nullptr,
-    params_st->params[node_idx].parameter_values[parameter_idx].integer_array_value);
+    params_st->params[node_idx].parameter_values[parameter_idx].bool_array_value);
   rcutils_reset_error();
 
   // Check proper sequence type
@@ -281,6 +364,21 @@ TEST(TestParse, parse_value_sequence) {
     params_st->params[node_idx].parameter_values[parameter_idx].string_array_value,
     allocator.state);
   params_st->params[node_idx].parameter_values[parameter_idx].string_array_value = nullptr;
+
+  // byte array value cannot be parsed, byte array is encoded as a base64 string, not a sequence
+  yaml_char_t byte_value[] = "AQID";  // [0x01, 0x02, 0x03]
+  const size_t byte_value_length = strlen((const char *)byte_value);
+  event.data.scalar.value = byte_value;
+  event.data.scalar.length = byte_value_length;
+  // Set tag, needed to parse base64 encoded binary
+  yaml_char_t tag_value[] = "tag:yaml.org,2002:binary";
+  event.data.scalar.tag = tag_value;
+  seq_data_type = DATA_TYPE_UNKNOWN;
+  EXPECT_EQ(
+    RCUTILS_RET_ERROR,
+    parse_value(event, is_seq, node_idx, parameter_idx, &seq_data_type, params_st));
+  rcutils_reset_error();
+  event.data.scalar.tag = NULL;
 }
 
 TEST(TestParse, parse_value_bad_args) {
@@ -368,7 +466,7 @@ TEST(TestParse, parse_key_bad_args)
   event.end_mark = {0u, 0u, 0u};
 
   rcutils_allocator_t allocator = rcutils_get_default_allocator();
-  uint32_t map_level = MAP_NODE_NAME_LVL;
+  yaml_map_lvl_t map_level = MAP_NODE_NAME_LVL;
   bool is_new_map = false;
   size_t node_idx = 0;
   size_t parameter_idx = 0;
@@ -436,16 +534,6 @@ TEST(TestParse, parse_key_bad_args)
   EXPECT_TRUE(rcutils_error_is_set());
   rcutils_reset_error();
 
-  // map_level is not a valid value
-  map_level = 42;
-  EXPECT_EQ(
-    RCUTILS_RET_ERROR,
-    parse_key(
-      event, &map_level, &is_new_map, &node_idx, &parameter_idx, &ns_tracker, params_st)) <<
-    rcutils_get_error_string().str;
-  EXPECT_TRUE(rcutils_error_is_set());
-  rcutils_reset_error();
-
   // previous parameter names required for parameter namespace
   map_level = MAP_PARAMS_LVL;
   is_new_map = true;
@@ -503,6 +591,7 @@ TEST(TestParse, parse_file_events_mock_yaml_parser_parse) {
     "lib:rcl_yaml_param_parser", yaml_parser_parse, [](yaml_parser_t *, yaml_event_t * event) {
       event->start_mark.line = 0u;
       event->type = YAML_NO_EVENT;
+      event->data.scalar.tag = NULL;
       return 1;
     });
   EXPECT_EQ(RCUTILS_RET_ERROR, parse_file_events(&parser, &ns_tracker, params_hdl));
@@ -524,6 +613,7 @@ TEST(TestParse, parse_value_events_mock_yaml_parser_parse) {
     "lib:rcl_yaml_param_parser", yaml_parser_parse, [](yaml_parser_t *, yaml_event_t * event) {
       event->start_mark.line = 0u;
       event->type = YAML_NO_EVENT;
+      event->data.scalar.tag = NULL;
       return 1;
     });
   EXPECT_FALSE(rcl_parse_yaml_value(node_name, param_name, yaml_value, params_st));

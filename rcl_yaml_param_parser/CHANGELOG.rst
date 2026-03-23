@@ -2,6 +2,59 @@
 Changelog for package rcl_yaml_param_parser
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+10.4.0 (2026-03-20)
+-------------------
+* Use the POSIX locale to parse YAML double (`#1292 <https://github.com/ros2/rcl/issues/1292>`_)
+* Contributors: Hugal31
+
+10.3.2 (2026-03-07)
+-------------------
+* rcl_yaml_node_struct_print print loop interation fix. (`#1290 <https://github.com/ros2/rcl//issues/1290>`_)
+* rcl_yaml_param_parser: add support for binary tag to load byte arrays parameters (`#1256 <https://github.com/ros2/rcl//issues/1256>`_)
+* Contributors: Romain Reignier, Tomoya Fujita
+
+10.3.1 (2026-02-09)
+-------------------
+
+10.3.0 (2026-01-29)
+-------------------
+
+10.2.7 (2026-01-19)
+-------------------
+* Validate name input in add_name_to_ns function (`#1281 <https://github.com/ros2/rcl/issues/1281>`_)
+* parse_key() should use yaml_map_lvl_t instead of uint_32. (`#1279 <https://github.com/ros2/rcl/issues/1279>`_)
+* Remove default from switch with enum, so that compiler warns. (`#1278 <https://github.com/ros2/rcl/issues/1278>`_)
+* Add yaml tags support (`#1275 <https://github.com/ros2/rcl/issues/1275>`_)
+  Co-authored-by: Lei Liu <Lei.Liu.AP@sony.com>
+* Contributors: Barry Xu, Tomoya Fujita
+
+10.2.6 (2025-11-17)
+-------------------
+* Fix REP url locations (`#1271 <https://github.com/ros2/rcl/issues/1271>`_)
+* Contributors: Tim Clephas
+
+10.2.5 (2025-10-21)
+-------------------
+* Fix param file parsing failure with wildcards due to ordering (`#1253 <https://github.com/ros2/rcl/issues/1253>`_)
+* Contributors: Barry Xu
+
+10.2.4 (2025-09-30)
+-------------------
+
+10.2.3 (2025-07-29)
+-------------------
+* Fix Cmake deprecation (`#1249 <https://github.com/ros2/rcl/issues/1249>`_)
+* Contributors: mosfet80
+
+10.2.2 (2025-06-23)
+-------------------
+
+10.2.1 (2025-05-30)
+-------------------
+
+10.2.0 (2025-04-25)
+-------------------
+
 10.1.0 (2025-04-04)
 -------------------
 

@@ -2,6 +2,73 @@
 Changelog for package rcl
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+10.4.0 (2026-03-20)
+-------------------
+* Add API for client libraries to set action server goal expiration callbacks (`#1295 <https://github.com/ros2/rcl/issues/1295>`_)
+* Fujitatomoya/improve rcl test graph (`#1296 <https://github.com/ros2/rcl/issues/1296>`_)
+* Add content filtering support check for subscriptions (`#1293 <https://github.com/ros2/rcl/issues/1293>`_)
+* Contributors: Barry Xu, Skyler Medeiros, Tomoya Fujita
+
+10.3.2 (2026-03-07)
+-------------------
+
+10.3.1 (2026-02-09)
+-------------------
+
+10.3.0 (2026-01-29)
+-------------------
+* rcl_logging_implementation package support. (`#1276 <https://github.com/ros2/rcl/issues/1276>`_)
+* Contributors: Tomoya Fujita
+
+10.2.7 (2026-01-19)
+-------------------
+* Remove default from switch with enum, so that compiler warns. (`#1278 <https://github.com/ros2/rcl/issues/1278>`_)
+* Contributors: Tomoya Fujita
+
+10.2.6 (2025-11-17)
+-------------------
+* Add clients servers info (`#1161 <https://github.com/ros2/rcl/issues/1161>`_)
+* Fix REP url locations (`#1271 <https://github.com/ros2/rcl/issues/1271>`_)
+* Contributors: Minju, Lee, Tim Clephas
+
+10.2.5 (2025-10-21)
+-------------------
+* rcl_logging_allocator_initialize() support. (`#1049 <https://github.com/ros2/rcl/issues/1049>`_)
+* Contributors: Sai Kishor Kothakota, Tomoya Fujita
+
+10.2.4 (2025-09-30)
+-------------------
+* Fix typos: occurrs->occurs, successfull->successful (`#1259 <https://github.com/ros2/rcl/issues/1259>`_)
+* Refer to 'the middleware' and not 'the DDS implementation' in doc (`#1260 <https://github.com/ros2/rcl/issues/1260>`_)
+* Switch to isolated testing via rmw_test_fixture (`#1251 <https://github.com/ros2/rcl/issues/1251>`_)
+* Contributors: Christophe Bedard, yadunund
+
+10.2.3 (2025-07-29)
+-------------------
+* Fix Cmake deprecation (`#1249 <https://github.com/ros2/rcl/issues/1249>`_)
+* Contributors: mosfet80
+
+10.2.2 (2025-06-23)
+-------------------
+* Assert HistoryQoS in test_info_by_topic (`#1242 <https://github.com/ros2/rcl//issues/1242>`_)
+* Add a test for the subscription option 'ignore_local_publications' (`#1239 <https://github.com/ros2/rcl//issues/1239>`_)
+* Contributors: Barry Xu, Mario Domínguez López
+
+10.2.1 (2025-05-30)
+-------------------
+* remove unnecessary test_with_localhost_only. (`#1238 <https://github.com/ros2/rcl/issues/1238>`_)
+* Address memory leaks in rcl test_timer_init_state (`#1236 <https://github.com/ros2/rcl/issues/1236>`_)
+* Removed unused nondefault_qos_profile (`#1233 <https://github.com/ros2/rcl/issues/1233>`_)
+* Removed unused functions (`#1230 <https://github.com/ros2/rcl/issues/1230>`_)
+* remove rcl_qos_profile_rosout_default. (`#1225 <https://github.com/ros2/rcl/issues/1225>`_)
+* remove rmw_connext from test. (`#1226 <https://github.com/ros2/rcl/issues/1226>`_)
+* Contributors: Alejandro Hernández Cordero, Michael Orlov, Tomoya Fujita
+
+10.2.0 (2025-04-25)
+-------------------
+* Fix a dangling pointer discovered by a fresh Clang (`#1222 <https://github.com/ros2/rcl/issues/1222>`_)
+* Contributors: Alexander Kornienko
+
 10.1.0 (2025-04-04)
 -------------------
 * Set envars to run tests with rmw_zenoh_cpp with multicast discovery (`#1218 <https://github.com/ros2/rcl/issues/1218>`_)

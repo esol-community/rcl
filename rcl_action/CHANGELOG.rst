@@ -2,6 +2,51 @@
 Changelog for package rcl_action
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+10.4.0 (2026-03-20)
+-------------------
+* Add API for client libraries to set action server goal expiration callbacks (`#1295 <https://github.com/ros2/rcl/issues/1295>`_)
+* support rcl_action_count_clients and rcl_action_count_servers. (`#1294 <https://github.com/ros2/rcl/issues/1294>`_)
+* Contributors: Skyler Medeiros, Tomoya Fujita
+
+10.3.2 (2026-03-07)
+-------------------
+
+10.3.1 (2026-02-09)
+-------------------
+
+10.3.0 (2026-01-29)
+-------------------
+
+10.2.7 (2026-01-19)
+-------------------
+
+10.2.6 (2025-11-17)
+-------------------
+* Fix REP url locations (`#1271 <https://github.com/ros2/rcl/issues/1271>`_)
+* Contributors: Tim Clephas
+
+10.2.5 (2025-10-21)
+-------------------
+
+10.2.4 (2025-09-30)
+-------------------
+* add rcl_action_goal_handle_is_abortable(). (`#1257 <https://github.com/ros2/rcl/issues/1257>`_)
+* Contributors: Tomoya Fujita
+
+10.2.3 (2025-07-29)
+-------------------
+* Fix Cmake deprecation (`#1249 <https://github.com/ros2/rcl/issues/1249>`_)
+* Contributors: mosfet80
+
+10.2.2 (2025-06-23)
+-------------------
+
+10.2.1 (2025-05-30)
+-------------------
+
+10.2.0 (2025-04-25)
+-------------------
+
 10.1.0 (2025-04-04)
 -------------------
 * Set envars to run tests with rmw_zenoh_cpp with multicast discovery (`#1218 <https://github.com/ros2/rcl/issues/1218>`_)

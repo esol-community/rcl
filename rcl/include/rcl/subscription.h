@@ -900,7 +900,7 @@ rcl_subscription_can_loan_messages(const rcl_subscription_t * subscription);
  * \param[in] user_data Given to the callback when called later, may be NULL
  * \return `RCL_RET_OK` if successful, or
  * \return `RCL_RET_INVALID_ARGUMENT` if `subscription` is NULL, or
- * \return `RCL_RET_UNSUPPORTED` if the API is not implemented in the dds implementation
+ * \return `RCL_RET_UNSUPPORTED` if the API is not supported by the middleware
  */
 RCL_PUBLIC
 RCL_WARN_UNUSED
@@ -909,6 +909,16 @@ rcl_subscription_set_on_new_message_callback(
   const rcl_subscription_t * subscription,
   rcl_event_callback_t callback,
   const void * user_data);
+
+/// Check if subscription instance supports content filtering.
+/**
+ * \param[in] subscription The subscription instance to check for content filtering support
+ * \return `true` if the subscription instance supports content filtering, `false` otherwise
+ *   (including when \p subscription is `NULL` or invalid).
+ */
+RCL_PUBLIC
+bool
+rcl_subscription_is_cft_supported(const rcl_subscription_t * subscription);
 
 #ifdef __cplusplus
 }

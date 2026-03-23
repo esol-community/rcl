@@ -68,16 +68,19 @@ public:
 };
 
 static uint8_t times_called = 0;
-static void callback_function(rcl_timer_t * timer, int64_t last_call)
+static void callback_function(rcl_timer_t * timer, int64_t last_call, const uintptr_t data)
 {
   (void) timer;
   (void) last_call;
+  const char * typed_data = reinterpret_cast<char *>(data);
+  ASSERT_EQ(strcmp("callback_data", typed_data), 0);
   times_called++;
 }
-static void callback_function_changed(rcl_timer_t * timer, int64_t last_call)
+static void callback_function_changed(rcl_timer_t * timer, int64_t last_call, const uintptr_t data)
 {
   (void) timer;
   (void) last_call;
+  (void) data;
   times_called--;
 }
 
@@ -101,6 +104,8 @@ public:
   rcl_timer_t timer;
   rcl_timer_callback_t timer_callback_test = &callback_function;
   rcl_timer_callback_t timer_callback_changed = &callback_function_changed;
+  const char * test_string = "callback_data";
+  uintptr_t timer_callback_test_data = (uintptr_t)test_string;
 
   void SetUp() override
   {
@@ -115,6 +120,10 @@ public:
     ret = rcl_timer_init2(
       &timer, &clock, this->context_ptr, RCL_S_TO_NS(1), timer_callback_test,
       rcl_get_default_allocator(), true);
+
+    uintptr_t dontcare = rcl_timer_exchange_callback_data(&timer, timer_callback_test_data);
+    (void) dontcare;
+
     ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
   }
 
@@ -505,36 +514,54 @@ TEST_F(TestTimerFixture, test_timer_init_state) {
   rcl_clock_t clock;
   rcl_allocator_t allocator = rcl_get_default_allocator();
   ret = rcl_clock_init(RCL_STEADY_TIME, &clock, &allocator);
+  OSRF_TESTING_TOOLS_CPP_SCOPE_EXIT(
+  {
+    rcl_ret_t ret = rcl_clock_fini(&clock);
+    EXPECT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
+  });
   ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
 
   rcl_timer_t timer = rcl_get_zero_initialized_timer();
+  {
+    ret = rcl_timer_init2(
+      &timer, &clock, this->context_ptr, RCL_S_TO_NS(1), nullptr, rcl_get_default_allocator(),
+      false);
+    OSRF_TESTING_TOOLS_CPP_SCOPE_EXIT(
+    {
+      rcl_ret_t ret = rcl_timer_fini(&timer);
+      EXPECT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
+    });
+    ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
 
-  ret = rcl_timer_init2(
-    &timer, &clock, this->context_ptr, RCL_S_TO_NS(1), nullptr, rcl_get_default_allocator(),
-    false);
-  ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
+    bool is_canceled = false;
+    ret = rcl_timer_is_canceled(&timer, &is_canceled);
+    EXPECT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
+    EXPECT_TRUE(is_canceled);
 
-  bool is_canceled = false;
-  ret = rcl_timer_is_canceled(&timer, &is_canceled);
-  EXPECT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
-  EXPECT_TRUE(is_canceled);
-
-  ret = rcl_timer_init2(
-    &timer, &clock, this->context_ptr, RCL_S_TO_NS(1), nullptr, rcl_get_default_allocator(),
-    true);
-  ASSERT_EQ(RCL_RET_ALREADY_INIT, ret) << rcl_get_error_string().str;
+    ret = rcl_timer_init2(
+      &timer, &clock, this->context_ptr, RCL_S_TO_NS(1), nullptr, rcl_get_default_allocator(),
+      true);
+    ASSERT_EQ(RCL_RET_ALREADY_INIT, ret) << rcl_get_error_string().str;
+  }
   rcl_reset_error();
 
-  timer = rcl_get_zero_initialized_timer();
+  {  // Note: Need to call rcl_timer_fini(&timer) before initializing it again
+    timer = rcl_get_zero_initialized_timer();
 
-  ret = rcl_timer_init2(
-    &timer, &clock, this->context_ptr, RCL_S_TO_NS(1), nullptr, rcl_get_default_allocator(),
-    true);
-  ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
-
-  ret = rcl_timer_is_canceled(&timer, &is_canceled);
-  EXPECT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
-  EXPECT_FALSE(is_canceled);
+    ret = rcl_timer_init2(
+      &timer, &clock, this->context_ptr, RCL_S_TO_NS(1), nullptr, rcl_get_default_allocator(),
+      true);
+    OSRF_TESTING_TOOLS_CPP_SCOPE_EXIT(
+    {
+      rcl_ret_t ret = rcl_timer_fini(&timer);
+      EXPECT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
+    });
+    ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
+    bool is_canceled = true;
+    ret = rcl_timer_is_canceled(&timer, &is_canceled);
+    EXPECT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
+    EXPECT_FALSE(is_canceled);
+  }
 }
 
 TEST_F(TestTimerFixture, test_canceled_timer) {

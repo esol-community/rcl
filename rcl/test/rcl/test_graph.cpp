@@ -638,9 +638,16 @@ TEST_F(TestGraphFixture, test_rcl_count_publishers) {
   ret = rcl_count_publishers(this->node_ptr, nullptr, &count);
   EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
   rcl_reset_error();
-  // TODO(wjwwood): test valid strings with invalid topic names in them
+  // invalid topic name contents
+  ret = rcl_count_publishers(this->node_ptr, "/invalid_topic?", &count);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
   // invalid count
   ret = rcl_count_publishers(this->node_ptr, topic_name, nullptr);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // empty string
+  ret = rcl_count_publishers(this->node_ptr, "", &count);
   EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
   rcl_reset_error();
   // valid call
@@ -672,9 +679,16 @@ TEST_F(TestGraphFixture, test_rcl_count_subscribers) {
   ret = rcl_count_subscribers(this->node_ptr, nullptr, &count);
   EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
   rcl_reset_error();
-  // TODO(wjwwood): test valid strings with invalid topic names in them
+  // invalid topic name contents
+  ret = rcl_count_subscribers(this->node_ptr, "/invalid_topic?", &count);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
   // invalid count
   ret = rcl_count_subscribers(this->node_ptr, topic_name, nullptr);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // empty string
+  ret = rcl_count_subscribers(this->node_ptr, "", &count);
   EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
   rcl_reset_error();
   // valid call
@@ -706,9 +720,16 @@ TEST_F(TestGraphFixture, test_rcl_count_clients) {
   ret = rcl_count_clients(this->node_ptr, nullptr, &count);
   EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
   rcl_reset_error();
-  // TODO(wjwwood): test valid strings with invalid topic names in them
+  // invalid service name contents
+  ret = rcl_count_clients(this->node_ptr, "/invalid_service?", &count);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
   // invalid count
   ret = rcl_count_clients(this->node_ptr, service_name, nullptr);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // empty string
+  ret = rcl_count_clients(this->node_ptr, "", &count);
   EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
   rcl_reset_error();
   // valid call
@@ -740,9 +761,16 @@ TEST_F(TestGraphFixture, test_rcl_count_services) {
   ret = rcl_count_services(this->node_ptr, nullptr, &count);
   EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
   rcl_reset_error();
-  // TODO(wjwwood): test valid strings with invalid topic names in them
+  // invalid service name contents
+  ret = rcl_count_services(this->node_ptr, "/invalid_service?", &count);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
   // invalid count
   ret = rcl_count_services(this->node_ptr, service_name, nullptr);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // empty string
+  ret = rcl_count_services(this->node_ptr, "", &count);
   EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
   rcl_reset_error();
   // valid call
@@ -831,6 +859,90 @@ TEST_F(TestGraphFixture, test_rcl_wait_for_subscribers) {
   rcl_reset_error();
   // Valid call (expect timeout since there are no subscribers)
   ret = rcl_wait_for_subscribers(this->node_ptr, &allocator, topic_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_TIMEOUT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+}
+
+/* Test the rcl_wait_for_clients function.
+ */
+TEST_F(TestGraphFixture, test_rcl_wait_for_clients) {
+  rcl_ret_t ret;
+  rcl_node_t zero_node = rcl_get_zero_initialized_node();
+  rcl_allocator_t zero_allocator = static_cast<rcl_allocator_t>(
+    rcutils_get_zero_initialized_allocator());
+  rcl_allocator_t allocator = rcl_get_default_allocator();
+  const char * service_name = "/service_test_rcl_wait_for_clients";
+  bool success = false;
+
+  // Invalid node
+  ret = rcl_wait_for_clients(nullptr, &allocator, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_NODE_INVALID, ret);
+  rcl_reset_error();
+  ret = rcl_wait_for_clients(&zero_node, &allocator, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_NODE_INVALID, ret);
+  rcl_reset_error();
+  ret = rcl_wait_for_clients(this->old_node_ptr, &allocator, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_NODE_INVALID, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // Invalid allocator
+  ret = rcl_wait_for_clients(this->node_ptr, nullptr, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  ret = rcl_wait_for_clients(this->node_ptr, &zero_allocator, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // Invalid topic name
+  ret = rcl_wait_for_clients(this->node_ptr, &allocator, nullptr, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // Invalid output arg
+  ret = rcl_wait_for_clients(this->node_ptr, &allocator, service_name, 1u, 100, nullptr);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // Valid call (expect timeout since there are no clients)
+  ret = rcl_wait_for_clients(this->node_ptr, &allocator, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_TIMEOUT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+}
+
+/* Test the rcl_wait_for_servers function.
+ */
+TEST_F(TestGraphFixture, test_rcl_wait_for_servers) {
+  rcl_ret_t ret;
+  rcl_node_t zero_node = rcl_get_zero_initialized_node();
+  rcl_allocator_t zero_allocator = static_cast<rcl_allocator_t>(
+    rcutils_get_zero_initialized_allocator());
+  rcl_allocator_t allocator = rcl_get_default_allocator();
+  const char * service_name = "/topic_test_rcl_wait_for_servers";
+  bool success = false;
+
+  // Invalid node
+  ret = rcl_wait_for_servers(nullptr, &allocator, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_NODE_INVALID, ret);
+  rcl_reset_error();
+  ret = rcl_wait_for_servers(&zero_node, &allocator, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_NODE_INVALID, ret);
+  rcl_reset_error();
+  ret = rcl_wait_for_servers(this->old_node_ptr, &allocator, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_NODE_INVALID, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // Invalid allocator
+  ret = rcl_wait_for_servers(this->node_ptr, nullptr, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  ret = rcl_wait_for_servers(this->node_ptr, &zero_allocator, service_name, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // Invalid topic name
+  ret = rcl_wait_for_servers(this->node_ptr, &allocator, nullptr, 1u, 100, &success);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // Invalid output arg
+  ret = rcl_wait_for_servers(this->node_ptr, &allocator, service_name, 1u, 100, nullptr);
+  EXPECT_EQ(RCL_RET_INVALID_ARGUMENT, ret) << rcl_get_error_string().str;
+  rcl_reset_error();
+  // Valid call (expect timeout since there are no servers)
+  ret = rcl_wait_for_servers(this->node_ptr, &allocator, service_name, 1u, 100, &success);
   EXPECT_EQ(RCL_RET_TIMEOUT, ret) << rcl_get_error_string().str;
   rcl_reset_error();
 }
